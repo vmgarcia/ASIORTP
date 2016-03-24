@@ -1,0 +1,11 @@
+package rtp;
+
+message Segment {
+	optional int32 source_dest_port = 1;
+	optional int32 sequence_no = 2;
+	optional bool ack = 3;
+	optional bool syn = 4;
+	optional bool fin = 5;
+	optional int32 receive_window = 6;
+	optional bytes data = 7;
+}
