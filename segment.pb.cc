@@ -34,8 +34,9 @@ void protobuf_AssignDesc_segment_2eproto() {
       "segment.proto");
   GOOGLE_CHECK(file != NULL);
   Segment_descriptor_ = file->message_type(0);
-  static const int Segment_offsets_[7] = {
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Segment, source_dest_port_),
+  static const int Segment_offsets_[8] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Segment, source_port_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Segment, dest_port_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Segment, sequence_no_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Segment, ack_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Segment, syn_),
@@ -84,10 +85,11 @@ void protobuf_AddDesc_segment_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\rsegment.proto\022\003rtp\"\205\001\n\007Segment\022\030\n\020sour"
-    "ce_dest_port\030\001 \001(\005\022\023\n\013sequence_no\030\002 \001(\005\022"
-    "\013\n\003ack\030\003 \001(\010\022\013\n\003syn\030\004 \001(\010\022\013\n\003fin\030\005 \001(\010\022\026"
-    "\n\016receive_window\030\006 \001(\005\022\014\n\004data\030\007 \001(\014", 156);
+    "\n\rsegment.proto\022\003rtp\"\223\001\n\007Segment\022\023\n\013sour"
+    "ce_port\030\001 \001(\t\022\021\n\tdest_port\030\002 \001(\t\022\023\n\013sequ"
+    "ence_no\030\003 \001(\005\022\013\n\003ack\030\004 \001(\010\022\013\n\003syn\030\005 \001(\010\022"
+    "\013\n\003fin\030\006 \001(\010\022\026\n\016receive_window\030\007 \001(\005\022\014\n\004"
+    "data\030\010 \001(\014", 170);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "segment.proto", &protobuf_RegisterTypes);
   Segment::default_instance_ = new Segment();
@@ -105,7 +107,8 @@ struct StaticDescriptorInitializer_segment_2eproto {
 // ===================================================================
 
 #ifndef _MSC_VER
-const int Segment::kSourceDestPortFieldNumber;
+const int Segment::kSourcePortFieldNumber;
+const int Segment::kDestPortFieldNumber;
 const int Segment::kSequenceNoFieldNumber;
 const int Segment::kAckFieldNumber;
 const int Segment::kSynFieldNumber;
@@ -133,7 +136,8 @@ Segment::Segment(const Segment& from)
 void Segment::SharedCtor() {
   ::google::protobuf::internal::GetEmptyString();
   _cached_size_ = 0;
-  source_dest_port_ = 0;
+  source_port_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  dest_port_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   sequence_no_ = 0;
   ack_ = false;
   syn_ = false;
@@ -149,6 +153,12 @@ Segment::~Segment() {
 }
 
 void Segment::SharedDtor() {
+  if (source_port_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete source_port_;
+  }
+  if (dest_port_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete dest_port_;
+  }
   if (data_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
     delete data_;
   }
@@ -188,8 +198,19 @@ void Segment::Clear() {
     ::memset(&first, 0, n);                                \
   } while (0)
 
-  if (_has_bits_[0 / 32] & 127) {
-    ZR_(source_dest_port_, receive_window_);
+  if (_has_bits_[0 / 32] & 255) {
+    ZR_(sequence_no_, fin_);
+    if (has_source_port()) {
+      if (source_port_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+        source_port_->clear();
+      }
+    }
+    if (has_dest_port()) {
+      if (dest_port_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+        dest_port_->clear();
+      }
+    }
+    receive_window_ = 0;
     if (has_data()) {
       if (data_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
         data_->clear();
@@ -214,23 +235,42 @@ bool Segment::MergePartialFromCodedStream(
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // optional int32 source_dest_port = 1;
+      // optional string source_port = 1;
       case 1: {
-        if (tag == 8) {
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
-                 input, &source_dest_port_)));
-          set_has_source_dest_port();
+        if (tag == 10) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_source_port()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+            this->source_port().data(), this->source_port().length(),
+            ::google::protobuf::internal::WireFormat::PARSE,
+            "source_port");
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(16)) goto parse_sequence_no;
+        if (input->ExpectTag(18)) goto parse_dest_port;
         break;
       }
 
-      // optional int32 sequence_no = 2;
+      // optional string dest_port = 2;
       case 2: {
-        if (tag == 16) {
+        if (tag == 18) {
+         parse_dest_port:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_dest_port()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+            this->dest_port().data(), this->dest_port().length(),
+            ::google::protobuf::internal::WireFormat::PARSE,
+            "dest_port");
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(24)) goto parse_sequence_no;
+        break;
+      }
+
+      // optional int32 sequence_no = 3;
+      case 3: {
+        if (tag == 24) {
          parse_sequence_no:
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
                    ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
@@ -239,13 +279,13 @@ bool Segment::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(24)) goto parse_ack;
+        if (input->ExpectTag(32)) goto parse_ack;
         break;
       }
 
-      // optional bool ack = 3;
-      case 3: {
-        if (tag == 24) {
+      // optional bool ack = 4;
+      case 4: {
+        if (tag == 32) {
          parse_ack:
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
                    bool, ::google::protobuf::internal::WireFormatLite::TYPE_BOOL>(
@@ -254,13 +294,13 @@ bool Segment::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(32)) goto parse_syn;
+        if (input->ExpectTag(40)) goto parse_syn;
         break;
       }
 
-      // optional bool syn = 4;
-      case 4: {
-        if (tag == 32) {
+      // optional bool syn = 5;
+      case 5: {
+        if (tag == 40) {
          parse_syn:
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
                    bool, ::google::protobuf::internal::WireFormatLite::TYPE_BOOL>(
@@ -269,13 +309,13 @@ bool Segment::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(40)) goto parse_fin;
+        if (input->ExpectTag(48)) goto parse_fin;
         break;
       }
 
-      // optional bool fin = 5;
-      case 5: {
-        if (tag == 40) {
+      // optional bool fin = 6;
+      case 6: {
+        if (tag == 48) {
          parse_fin:
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
                    bool, ::google::protobuf::internal::WireFormatLite::TYPE_BOOL>(
@@ -284,13 +324,13 @@ bool Segment::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(48)) goto parse_receive_window;
+        if (input->ExpectTag(56)) goto parse_receive_window;
         break;
       }
 
-      // optional int32 receive_window = 6;
-      case 6: {
-        if (tag == 48) {
+      // optional int32 receive_window = 7;
+      case 7: {
+        if (tag == 56) {
          parse_receive_window:
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
                    ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
@@ -299,13 +339,13 @@ bool Segment::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(58)) goto parse_data;
+        if (input->ExpectTag(66)) goto parse_data;
         break;
       }
 
-      // optional bytes data = 7;
-      case 7: {
-        if (tag == 58) {
+      // optional bytes data = 8;
+      case 8: {
+        if (tag == 66) {
          parse_data:
           DO_(::google::protobuf::internal::WireFormatLite::ReadBytes(
                 input, this->mutable_data()));
@@ -341,40 +381,55 @@ failure:
 void Segment::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
   // @@protoc_insertion_point(serialize_start:rtp.Segment)
-  // optional int32 source_dest_port = 1;
-  if (has_source_dest_port()) {
-    ::google::protobuf::internal::WireFormatLite::WriteInt32(1, this->source_dest_port(), output);
+  // optional string source_port = 1;
+  if (has_source_port()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->source_port().data(), this->source_port().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "source_port");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      1, this->source_port(), output);
   }
 
-  // optional int32 sequence_no = 2;
+  // optional string dest_port = 2;
+  if (has_dest_port()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->dest_port().data(), this->dest_port().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "dest_port");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      2, this->dest_port(), output);
+  }
+
+  // optional int32 sequence_no = 3;
   if (has_sequence_no()) {
-    ::google::protobuf::internal::WireFormatLite::WriteInt32(2, this->sequence_no(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(3, this->sequence_no(), output);
   }
 
-  // optional bool ack = 3;
+  // optional bool ack = 4;
   if (has_ack()) {
-    ::google::protobuf::internal::WireFormatLite::WriteBool(3, this->ack(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteBool(4, this->ack(), output);
   }
 
-  // optional bool syn = 4;
+  // optional bool syn = 5;
   if (has_syn()) {
-    ::google::protobuf::internal::WireFormatLite::WriteBool(4, this->syn(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteBool(5, this->syn(), output);
   }
 
-  // optional bool fin = 5;
+  // optional bool fin = 6;
   if (has_fin()) {
-    ::google::protobuf::internal::WireFormatLite::WriteBool(5, this->fin(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteBool(6, this->fin(), output);
   }
 
-  // optional int32 receive_window = 6;
+  // optional int32 receive_window = 7;
   if (has_receive_window()) {
-    ::google::protobuf::internal::WireFormatLite::WriteInt32(6, this->receive_window(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(7, this->receive_window(), output);
   }
 
-  // optional bytes data = 7;
+  // optional bytes data = 8;
   if (has_data()) {
     ::google::protobuf::internal::WireFormatLite::WriteBytesMaybeAliased(
-      7, this->data(), output);
+      8, this->data(), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -387,41 +442,58 @@ void Segment::SerializeWithCachedSizes(
 ::google::protobuf::uint8* Segment::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
   // @@protoc_insertion_point(serialize_to_array_start:rtp.Segment)
-  // optional int32 source_dest_port = 1;
-  if (has_source_dest_port()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(1, this->source_dest_port(), target);
+  // optional string source_port = 1;
+  if (has_source_port()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->source_port().data(), this->source_port().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "source_port");
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        1, this->source_port(), target);
   }
 
-  // optional int32 sequence_no = 2;
+  // optional string dest_port = 2;
+  if (has_dest_port()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->dest_port().data(), this->dest_port().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "dest_port");
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        2, this->dest_port(), target);
+  }
+
+  // optional int32 sequence_no = 3;
   if (has_sequence_no()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(2, this->sequence_no(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(3, this->sequence_no(), target);
   }
 
-  // optional bool ack = 3;
+  // optional bool ack = 4;
   if (has_ack()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(3, this->ack(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(4, this->ack(), target);
   }
 
-  // optional bool syn = 4;
+  // optional bool syn = 5;
   if (has_syn()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(4, this->syn(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(5, this->syn(), target);
   }
 
-  // optional bool fin = 5;
+  // optional bool fin = 6;
   if (has_fin()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(5, this->fin(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(6, this->fin(), target);
   }
 
-  // optional int32 receive_window = 6;
+  // optional int32 receive_window = 7;
   if (has_receive_window()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(6, this->receive_window(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(7, this->receive_window(), target);
   }
 
-  // optional bytes data = 7;
+  // optional bytes data = 8;
   if (has_data()) {
     target =
       ::google::protobuf::internal::WireFormatLite::WriteBytesToArray(
-        7, this->data(), target);
+        8, this->data(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -436,43 +508,50 @@ int Segment::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // optional int32 source_dest_port = 1;
-    if (has_source_dest_port()) {
+    // optional string source_port = 1;
+    if (has_source_port()) {
       total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::Int32Size(
-          this->source_dest_port());
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->source_port());
     }
 
-    // optional int32 sequence_no = 2;
+    // optional string dest_port = 2;
+    if (has_dest_port()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->dest_port());
+    }
+
+    // optional int32 sequence_no = 3;
     if (has_sequence_no()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::Int32Size(
           this->sequence_no());
     }
 
-    // optional bool ack = 3;
+    // optional bool ack = 4;
     if (has_ack()) {
       total_size += 1 + 1;
     }
 
-    // optional bool syn = 4;
+    // optional bool syn = 5;
     if (has_syn()) {
       total_size += 1 + 1;
     }
 
-    // optional bool fin = 5;
+    // optional bool fin = 6;
     if (has_fin()) {
       total_size += 1 + 1;
     }
 
-    // optional int32 receive_window = 6;
+    // optional int32 receive_window = 7;
     if (has_receive_window()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::Int32Size(
           this->receive_window());
     }
 
-    // optional bytes data = 7;
+    // optional bytes data = 8;
     if (has_data()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::BytesSize(
@@ -506,8 +585,11 @@ void Segment::MergeFrom(const ::google::protobuf::Message& from) {
 void Segment::MergeFrom(const Segment& from) {
   GOOGLE_CHECK_NE(&from, this);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    if (from.has_source_dest_port()) {
-      set_source_dest_port(from.source_dest_port());
+    if (from.has_source_port()) {
+      set_source_port(from.source_port());
+    }
+    if (from.has_dest_port()) {
+      set_dest_port(from.dest_port());
     }
     if (from.has_sequence_no()) {
       set_sequence_no(from.sequence_no());
@@ -550,7 +632,8 @@ bool Segment::IsInitialized() const {
 
 void Segment::Swap(Segment* other) {
   if (other != this) {
-    std::swap(source_dest_port_, other->source_dest_port_);
+    std::swap(source_port_, other->source_port_);
+    std::swap(dest_port_, other->dest_port_);
     std::swap(sequence_no_, other->sequence_no_);
     std::swap(ack_, other->ack_);
     std::swap(syn_, other->syn_);
