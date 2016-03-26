@@ -12,7 +12,7 @@ namespace rtp
 	class Socket
 	{
 	public:
-		Socket(boost::asio::io_service io_service_, std::string source_port);
+		Socket(boost::asio::io_service& io_service_,std::string source_ip, std::string source_port);
 		boost::shared_ptr<Connection> create_connection(std::string ip, std::string port);
 		boost::asio::io_service& get_io_service();
 		void start_receive();
@@ -20,23 +20,24 @@ namespace rtp
 		void multiplex(std::vector<uint8_t>& dbuf, const boost::system::error_code& error, 
 			std::size_t bytes_transferred);
 		void connection_establishment(std::vector<uint8_t>& dbuf, boost::shared_ptr<Connection> connection);
-		void handle_send(bool finished, boost::shared_ptr<std::string> message,
+		void handle_send(boost::shared_ptr<std::vector<uint8_t>> message,
 			const boost::system::error_code& error, 
 			std::size_t bytes_transferred);
 
+		boost::asio::io_service& io_service_;
 		boost::asio::ip::udp::socket socket_;
 		std::unordered_map<std::string, boost::shared_ptr<Connection>> connections;
 		boost::asio::ip::udp::endpoint remote_endpoint_;
 		std::string source_port;
-
+		std::string source_ip;
 	};
 
 	class Connection
 	{
 	public:
 		Connection(boost::asio::ip::udp::endpoint remote_endpoint_);
-		bool valid();
-		bool set_valid(bool val);
+		bool is_valid();
+		void set_valid(bool val);
 	private:
 
 		//boost::asio::ip::udp::socket& socket_;
