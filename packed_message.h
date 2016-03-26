@@ -84,12 +84,12 @@ public:
     // decode the header and return the message length. Return 0 in case of 
     // an error.
     //
-    unsigned decode_header(const data_buffer& buf) const
+    unsigned decode_header(const data_buffer& buf, int offset) const
     {
-        if (buf.size() < HEADER_SIZE)
+        if (buf.size() - offset < HEADER_SIZE)
             return 0;
         unsigned msg_size = 0;
-        for (unsigned i = 0; i < HEADER_SIZE; ++i)
+        for (unsigned i = offset; i < offset + HEADER_SIZE; ++i)
             msg_size = msg_size * 256 + (static_cast<unsigned>(buf[i]) & 0xFF);
         return msg_size;
     }
@@ -97,9 +97,9 @@ public:
     // Unpack and store a message from the given packed buffer.
     // Return true if unpacking successful, false otherwise.
     //
-    bool unpack(const data_buffer& buf)
+    bool unpack(const data_buffer& buf, unsigned size, int offset)
     {
-        return m_msg->ParseFromArray(&buf[HEADER_SIZE], buf.size() - HEADER_SIZE);
+        return m_msg->ParseFromArray(&buf[offset + HEADER_SIZE], size);
     }
 private:
     // Encodes the side into a header at the beginning of buf
