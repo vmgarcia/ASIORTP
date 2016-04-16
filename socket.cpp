@@ -8,6 +8,7 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/asio/steady_timer.hpp>
+#include <boost/crc.hpp>
 
 //#include <boost/system.hpp>
 #include <boost/bind.hpp>
@@ -40,7 +41,7 @@ rtp::Socket::Socket(boost::asio::io_service& io_service_, std::string source_ip,
  */
 void rtp::Socket::start_receive()
 {
-	boost::shared_ptr<data_buffer> tmp_buf = boost::make_shared<data_buffer>(2000);
+	boost::shared_ptr<data_buffer> tmp_buf = boost::make_shared<data_buffer>(1000);
 	socket_.async_receive_from(boost::asio::buffer(*tmp_buf), remote_endpoint_, 
 		boost::bind(&rtp::Socket::multiplex, this,
 			tmp_buf,
@@ -291,8 +292,71 @@ std::string rtp::get_endpoint_str(udp::endpoint remote_endpoint_)
 }
 
 
+boost::uint32_t rtp::create_checksum(uint8_t* bytes)
+{
+	std::size_t size = sizeof(bytes);
+	boost::crc_32_type result;
+
+	result.process_bytes(bytes, size);
+	return (boost::uint32_t) result.checksum();
+}
+
+boost::uint32_t rtp::create_header_checksum(SegmentPtr segment)
+{
+	struct header_struct {
+		std::string source_port;
+		std::string dest_port;
+		boost::uint32_t sequence_no;
+		bool ack;
+		bool syn;
+		bool fin;
+		boost::uint32_t receive_window;
+	};
+	header_struct header;
+	if (segment->has_source_port()) header.source_port = segment->source_port();
+	if (segment->has_dest_port()) header.dest_port = segment->dest_port();
+	if (segment->has_sequence_no()) header.sequence_no = segment->sequence_no();
+	if (segment->has_ack()) header.ack = segment->ack();
+	if (segment->has_syn()) header.syn = segment->syn();
+	if (segment->has_fin()) header.fin = segment->fin();
+	if (segment->has_receive_window()) header.receive_window = segment->receive_window();
+
+	uint8_t* header_bytes = reinterpret_cast<uint8_t*>(&header);
+	std::size_t size = sizeof(header_bytes) / sizeof(header_bytes[0]);
+	boost::crc_32_type checksum_calculator;
+	checksum_calculator.process_bytes(header_bytes, size);
+
+	boost::uint32_t calculated_checksum = checksum_calculator.checksum();
 
 
+	return calculated_checksum;
+
+}
+
+bool rtp::check_header_checksum(SegmentPtr segment)
+{
+	boost::uint32_t sent_checksum = segment->header_checksum();
+	boost::uint32_t calculated_checksum = create_header_checksum(segment);
+
+	return sent_checksum == calculated_checksum; 
+
+}
+
+boost::uint32_t rtp::create_data_checksum(SegmentPtr segment)
+{
+	std::string data_str = segment->data();
+	uint8_t* data_bytes = reinterpret_cast<uint8_t*>(const_cast<char*>(data_str.c_str()));
+	boost::uint32_t checksum = create_checksum(data_bytes);
+	return checksum;
+}
+
+bool rtp::check_data_checksum(SegmentPtr segment)
+{
+	boost::uint32_t sent_checksum = segment->data_checksum();
+	boost::uint32_t calculated_checksum = create_data_checksum(segment);
+
+	return sent_checksum == calculated_checksum;
+}
 
 int main(int argc, char* argv[])
 {

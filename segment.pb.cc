@@ -34,7 +34,7 @@ void protobuf_AssignDesc_segment_2eproto() {
       "segment.proto");
   GOOGLE_CHECK(file != NULL);
   Segment_descriptor_ = file->message_type(0);
-  static const int Segment_offsets_[8] = {
+  static const int Segment_offsets_[10] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Segment, source_port_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Segment, dest_port_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Segment, sequence_no_),
@@ -43,6 +43,8 @@ void protobuf_AssignDesc_segment_2eproto() {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Segment, fin_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Segment, receive_window_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Segment, data_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Segment, data_checksum_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Segment, header_checksum_),
   };
   Segment_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -85,11 +87,12 @@ void protobuf_AddDesc_segment_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\rsegment.proto\022\003rtp\"\223\001\n\007Segment\022\023\n\013sour"
+    "\n\rsegment.proto\022\003rtp\"\303\001\n\007Segment\022\023\n\013sour"
     "ce_port\030\001 \001(\t\022\021\n\tdest_port\030\002 \001(\t\022\023\n\013sequ"
     "ence_no\030\003 \001(\005\022\013\n\003ack\030\004 \001(\010\022\013\n\003syn\030\005 \001(\010\022"
     "\013\n\003fin\030\006 \001(\010\022\026\n\016receive_window\030\007 \001(\005\022\014\n\004"
-    "data\030\010 \001(\014", 170);
+    "data\030\010 \001(\014\022\025\n\rdata_checksum\030\t \001(\005\022\027\n\017hea"
+    "der_checksum\030\n \001(\005", 218);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "segment.proto", &protobuf_RegisterTypes);
   Segment::default_instance_ = new Segment();
@@ -115,6 +118,8 @@ const int Segment::kSynFieldNumber;
 const int Segment::kFinFieldNumber;
 const int Segment::kReceiveWindowFieldNumber;
 const int Segment::kDataFieldNumber;
+const int Segment::kDataChecksumFieldNumber;
+const int Segment::kHeaderChecksumFieldNumber;
 #endif  // !_MSC_VER
 
 Segment::Segment()
@@ -144,6 +149,8 @@ void Segment::SharedCtor() {
   fin_ = false;
   receive_window_ = 0;
   data_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  data_checksum_ = 0;
+  header_checksum_ = 0;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -217,6 +224,7 @@ void Segment::Clear() {
       }
     }
   }
+  ZR_(data_checksum_, header_checksum_);
 
 #undef OFFSET_OF_FIELD_
 #undef ZR_
@@ -352,6 +360,36 @@ bool Segment::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
+        if (input->ExpectTag(72)) goto parse_data_checksum;
+        break;
+      }
+
+      // optional int32 data_checksum = 9;
+      case 9: {
+        if (tag == 72) {
+         parse_data_checksum:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                 input, &data_checksum_)));
+          set_has_data_checksum();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(80)) goto parse_header_checksum;
+        break;
+      }
+
+      // optional int32 header_checksum = 10;
+      case 10: {
+        if (tag == 80) {
+         parse_header_checksum:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                 input, &header_checksum_)));
+          set_has_header_checksum();
+        } else {
+          goto handle_unusual;
+        }
         if (input->ExpectAtEnd()) goto success;
         break;
       }
@@ -432,6 +470,16 @@ void Segment::SerializeWithCachedSizes(
       8, this->data(), output);
   }
 
+  // optional int32 data_checksum = 9;
+  if (has_data_checksum()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(9, this->data_checksum(), output);
+  }
+
+  // optional int32 header_checksum = 10;
+  if (has_header_checksum()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(10, this->header_checksum(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -494,6 +542,16 @@ void Segment::SerializeWithCachedSizes(
     target =
       ::google::protobuf::internal::WireFormatLite::WriteBytesToArray(
         8, this->data(), target);
+  }
+
+  // optional int32 data_checksum = 9;
+  if (has_data_checksum()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(9, this->data_checksum(), target);
+  }
+
+  // optional int32 header_checksum = 10;
+  if (has_header_checksum()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(10, this->header_checksum(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -559,6 +617,22 @@ int Segment::ByteSize() const {
     }
 
   }
+  if (_has_bits_[8 / 32] & (0xffu << (8 % 32))) {
+    // optional int32 data_checksum = 9;
+    if (has_data_checksum()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::Int32Size(
+          this->data_checksum());
+    }
+
+    // optional int32 header_checksum = 10;
+    if (has_header_checksum()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::Int32Size(
+          this->header_checksum());
+    }
+
+  }
   if (!unknown_fields().empty()) {
     total_size +=
       ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
@@ -610,6 +684,14 @@ void Segment::MergeFrom(const Segment& from) {
       set_data(from.data());
     }
   }
+  if (from._has_bits_[8 / 32] & (0xffu << (8 % 32))) {
+    if (from.has_data_checksum()) {
+      set_data_checksum(from.data_checksum());
+    }
+    if (from.has_header_checksum()) {
+      set_header_checksum(from.header_checksum());
+    }
+  }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
 
@@ -640,6 +722,8 @@ void Segment::Swap(Segment* other) {
     std::swap(fin_, other->fin_);
     std::swap(receive_window_, other->receive_window_);
     std::swap(data_, other->data_);
+    std::swap(data_checksum_, other->data_checksum_);
+    std::swap(header_checksum_, other->header_checksum_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

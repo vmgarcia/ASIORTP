@@ -37,7 +37,14 @@ rtp::Connection::Connection(udp::endpoint remote_endpoint_, boost::shared_ptr<rt
 
 bool rtp::Connection::is_valid()
 {
-	if (DEBUG) std::cout << "is valid" << std::endl;
+	if (DEBUG && valid) 
+	{
+		std::cout << "is valid"<<std::endl;
+	}
+	else if (DEBUG)
+	{
+		std::cout << "not valid" << std::endl;
+	}
 	return valid;
 }
 

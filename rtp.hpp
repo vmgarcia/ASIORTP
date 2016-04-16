@@ -9,7 +9,12 @@ namespace rtp
 
 	
 	std::string get_endpoint_str(boost::asio::ip::udp::endpoint remote_endpoint_);
-
+	boost::uint32_t create_checksum(uint8_t* bytes);
+	boost::uint32_t create_header_checksum(boost::shared_ptr<rtp::Segment> segment);
+	boost::uint32_t create_data_checksum(boost::shared_ptr<rtp::Segment> segment);
+	bool check_header_checksum(boost::shared_ptr<rtp::Segment> segment);
+	bool check_data_checksum(boost::shared_ptr<rtp::Segment> segment);
+	
 	class Connection;
 	class Acceptor;
 	class Socket :  public boost::enable_shared_from_this<Socket>
