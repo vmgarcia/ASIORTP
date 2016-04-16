@@ -61,9 +61,9 @@ void rtp::Connection::close_connection()
 
 boost::shared_ptr<boost::asio::deadline_timer> rtp::Connection::new_timer(
 	boost::asio::io_service& io, 
-	boost::posix_time::seconds seconds)
+	boost::posix_time::milliseconds milliseconds)
 {
-	auto timer = boost::make_shared<boost::asio::deadline_timer>(io, seconds);
+	auto timer = boost::make_shared<boost::asio::deadline_timer>(io, milliseconds);
 	timer_vec.push_back(timer);
 	return timer;
 }

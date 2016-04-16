@@ -214,7 +214,7 @@ void rtp::Socket::handle_connection_est(boost::shared_ptr<data_buffer> message,
 	const boost::system::error_code& error,
 	std::size_t bytes_transferred)
 {
-	auto timer = connection->new_timer(io_service_, boost::posix_time::seconds(2));
+	auto timer = connection->new_timer(io_service_, boost::posix_time::milliseconds(200));
 	timer->async_wait(boost::bind(&rtp::Socket::handle_connection_timeout, this,
 		message,
 		connection,

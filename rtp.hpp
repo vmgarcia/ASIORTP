@@ -79,7 +79,7 @@ namespace rtp
 		int get_timeout_seconds();
 		void reset_timeout();
 		boost::shared_ptr<boost::asio::deadline_timer> new_timer(boost::asio::io_service& io, 
-			boost::posix_time::seconds seconds);
+			boost::posix_time::milliseconds milliseconds);
 		void delete_timer(boost::shared_ptr<boost::asio::deadline_timer> timer);
 
 	private:
