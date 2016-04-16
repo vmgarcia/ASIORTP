@@ -90,18 +90,21 @@ boost::shared_ptr<rtp::Connection> rtp::Socket::create_connection(std::string ip
 
 	PackedMessage<rtp::Segment> m_packed_segment = boost::make_shared<rtp::Segment>();
 	boost::shared_ptr<data_buffer> message = boost::make_shared<data_buffer>();
-	SegmentPtr ackseg= boost::make_shared<rtp::Segment>();
-	ackseg->set_syn(true);
-	ackseg->set_sequence_no(connection->get_sequence_no());
-	std::cout << ackseg->ack() << std::endl;
-	PackedMessage<rtp::Segment> initialack(ackseg);
+	SegmentPtr synseg= boost::make_shared<rtp::Segment>();
+	synseg->set_syn(true);
+	std::cout<<synseg->ack()<<std::endl;
+	synseg->set_sequence_no(connection->get_sequence_no());
+	synseg->set_header_checksum(create_header_checksum(synseg));
+	std::cout << "first checksum" <<  std::endl;
+	std::cout << synseg->header_checksum() << std::endl;
+	PackedMessage<rtp::Segment> initialack(synseg);
 	initialack.pack(*message);
 
 	// unsigned size = initialack.decode_header(*message, 0);
 	// initialack.unpack(*message, size, 0);
 	// SegmentPtr ackseg2 = initialack.get_msg();
 	// std::cout <<ackseg->ack() << std::endl;
-	std::cout << show_hex(*message) <<std::endl;
+	//std::cout << show_hex(*message) <<std::endl;
   	socket_.async_send_to(boost::asio::buffer(*message), remote_endpoint_,
 	  boost::bind(&rtp::Socket::handle_connection_est, this, message,
 	  	connection,
@@ -126,73 +129,79 @@ void rtp::Socket::connection_establishment(boost::shared_ptr<data_buffer> m_read
     //buffer_position += msg_len;
 
     SegmentPtr rcvdseg = m_packed_segment.get_msg();
-    std::cout << "sending the pack" <<std::endl;
+    std::cout << "Received connect segment" <<std::endl;
 
-    std::cout << rcvdseg->syn() <<std::endl;
-    std::cout << rcvdseg->ack() <<std::endl;
-    std::cout << rcvdseg->sequence_no() << std::endl;
+    std::cout << "Syn" << rcvdseg->syn() <<std::endl;
+    std::cout << "Ack" << rcvdseg->ack() <<std::endl;
+    std::cout << "Seq" << rcvdseg->sequence_no() << std::endl;
     std::cout << "___________________________________" <<std::endl;
 
 
 	boost::shared_ptr<data_buffer> message = boost::make_shared<data_buffer>();
+	if (check_header_checksum(rcvdseg))
+	{
+		// if receiving a syn ack packet send the final ack packet
+	    if (rcvdseg->syn() && rcvdseg->sequence_no() == -2)
+	    {
+	    	if(DEBUG)std::cout << "syn" <<std::endl;
+	    	SegmentPtr synackseg = boost::make_shared<rtp::Segment>();
+	    	synackseg->set_ack(true);
+	    	synackseg->set_syn(true);
+	    	connection->set_sequence_no(rcvdseg->sequence_no() + 1);
+	    	synackseg->set_sequence_no(connection->get_sequence_no());
 
-	// if receiving a syn ack packet send the final ack packet
-    if (rcvdseg->syn() && rcvdseg->sequence_no() == -2)
-    {
-    	if(DEBUG)std::cout << "syn" <<std::endl;
-    	SegmentPtr synackseg = boost::make_shared<rtp::Segment>();
-    	synackseg->set_ack(true);
-    	synackseg->set_syn(true);
+	    	synackseg->set_header_checksum(create_header_checksum(synackseg));
 
-    	connection->set_sequence_no(rcvdseg->sequence_no() + 1);
-    	synackseg->set_sequence_no(connection->get_sequence_no());
+	    	PackedMessage<rtp::Segment> synack(synackseg);
+	    	synack.pack(*message);
 
-    	PackedMessage<rtp::Segment> synack(synackseg);
-    	synack.pack(*message);
+	    	int next_seq_no = connection->get_sequence_no() + 1;
+		    socket_.async_send_to(boost::asio::buffer(*message), remote_endpoint_,
+		    	boost::bind(&rtp::Socket::handle_connection_est, this,
+		    		message,
+		    		connection,
+		    		next_seq_no,
+		    		boost::asio::placeholders::error,
+		    		boost::asio::placeholders::bytes_transferred));
 
-    	int next_seq_no = connection->get_sequence_no() + 1;
-	    socket_.async_send_to(boost::asio::buffer(*message), remote_endpoint_,
-	    	boost::bind(&rtp::Socket::handle_connection_est, this,
-	    		message,
-	    		connection,
-	    		next_seq_no,
-	    		boost::asio::placeholders::error,
-	    		boost::asio::placeholders::bytes_transferred));
+		    if(DEBUG) std::cout << "sent synack" <<std::endl;
+	    }
+	    else if (rcvdseg->syn() && rcvdseg->ack() && rcvdseg->sequence_no() == -1)
+	    {
 
-	    if(DEBUG) std::cout << "sent synack" <<std::endl;
-    }
-    else if (rcvdseg->syn() && rcvdseg->ack() && rcvdseg->sequence_no() == -1)
-    {
+	    	if(DEBUG) std::cout << "synack" <<std::endl;
+	    	SegmentPtr ackseg = boost::make_shared<rtp::Segment>();
+	    	ackseg->set_ack(true);
 
-    	if(DEBUG) std::cout << "synack" <<std::endl;
-    	SegmentPtr ackseg = boost::make_shared<rtp::Segment>();
-    	ackseg->set_ack(true);
+	    	connection->set_sequence_no(rcvdseg->sequence_no() + 1);
+	    	ackseg->set_sequence_no(connection->get_sequence_no());
 
-    	connection->set_sequence_no(rcvdseg->sequence_no() + 1);
-    	ackseg->set_sequence_no(connection->get_sequence_no());
+		    ackseg->set_header_checksum(create_header_checksum(ackseg));
 
-    	PackedMessage<rtp::Segment> finalack(ackseg);
-    	finalack.pack(*message);
 
-    	int next_seq_no = connection->get_sequence_no();
+	    	PackedMessage<rtp::Segment> finalack(ackseg);
+	    	finalack.pack(*message);
 
-	    socket_.async_send_to(boost::asio::buffer(*message), remote_endpoint_,
-	    	boost::bind(&rtp::Socket::handle_connection_est, this,
-	    		message,
-	    		connection,
-	    		next_seq_no,
-	    		boost::asio::placeholders::error,
-	    		boost::asio::placeholders::bytes_transferred));
-    	connection->set_valid(true);
-	    if(DEBUG) std::cout << "sent ack" <<std::endl;
+	    	int next_seq_no = connection->get_sequence_no();
 
-    }
-    else if (rcvdseg->ack() && rcvdseg->sequence_no() == 0)
-    {
-    	connection->set_sequence_no(rcvdseg->sequence_no());
-    	if(DEBUG) std::cout << "ack" <<std::endl;
-    	connection->set_valid(true);
-    }
+		    socket_.async_send_to(boost::asio::buffer(*message), remote_endpoint_,
+		    	boost::bind(&rtp::Socket::handle_connection_est, this,
+		    		message,
+		    		connection,
+		    		next_seq_no,
+		    		boost::asio::placeholders::error,
+		    		boost::asio::placeholders::bytes_transferred));
+	    	connection->set_valid(true);
+		    if(DEBUG) std::cout << "sent ack" <<std::endl;
+
+	    }
+	    else if (rcvdseg->ack() && rcvdseg->sequence_no() == 0)
+	    {
+	    	connection->set_sequence_no(rcvdseg->sequence_no());
+	    	if(DEBUG) std::cout << "ack" <<std::endl;
+	    	connection->set_valid(true);
+	    }
+	}
     
     start_receive();
 }
@@ -304,22 +313,22 @@ boost::uint32_t rtp::create_checksum(uint8_t* bytes)
 boost::uint32_t rtp::create_header_checksum(SegmentPtr segment)
 {
 	struct header_struct {
-		std::string source_port;
-		std::string dest_port;
-		boost::uint32_t sequence_no;
+		// std::string source_port;
+		// std::string dest_port;
+		int sequence_no;
 		bool ack;
 		bool syn;
 		bool fin;
-		boost::uint32_t receive_window;
+		int receive_window;
 	};
 	header_struct header;
-	if (segment->has_source_port()) header.source_port = segment->source_port();
-	if (segment->has_dest_port()) header.dest_port = segment->dest_port();
-	if (segment->has_sequence_no()) header.sequence_no = segment->sequence_no();
-	if (segment->has_ack()) header.ack = segment->ack();
-	if (segment->has_syn()) header.syn = segment->syn();
-	if (segment->has_fin()) header.fin = segment->fin();
-	if (segment->has_receive_window()) header.receive_window = segment->receive_window();
+	// header.source_port = segment->source_port();
+	// header.dest_port = segment->dest_port();
+	header.sequence_no = segment->sequence_no();
+	header.ack = segment->ack();
+	header.syn = segment->syn();
+	header.fin = segment->fin();
+	header.receive_window = segment->receive_window();
 
 	uint8_t* header_bytes = reinterpret_cast<uint8_t*>(&header);
 	std::size_t size = sizeof(header_bytes) / sizeof(header_bytes[0]);
@@ -337,7 +346,10 @@ bool rtp::check_header_checksum(SegmentPtr segment)
 {
 	boost::uint32_t sent_checksum = segment->header_checksum();
 	boost::uint32_t calculated_checksum = create_header_checksum(segment);
-
+	bool val = sent_checksum == calculated_checksum;
+	std::cout << "Checksum is " << val <<std::endl;
+	std::cout << sent_checksum << std::endl;
+	std::cout << calculated_checksum << std::endl;
 	return sent_checksum == calculated_checksum; 
 
 }

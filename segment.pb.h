@@ -161,19 +161,19 @@ class Segment : public ::google::protobuf::Message {
   inline ::std::string* release_data();
   inline void set_allocated_data(::std::string* data);
 
-  // optional int32 data_checksum = 9;
+  // optional uint32 data_checksum = 9;
   inline bool has_data_checksum() const;
   inline void clear_data_checksum();
   static const int kDataChecksumFieldNumber = 9;
-  inline ::google::protobuf::int32 data_checksum() const;
-  inline void set_data_checksum(::google::protobuf::int32 value);
+  inline ::google::protobuf::uint32 data_checksum() const;
+  inline void set_data_checksum(::google::protobuf::uint32 value);
 
-  // optional int32 header_checksum = 10;
+  // optional uint32 header_checksum = 10;
   inline bool has_header_checksum() const;
   inline void clear_header_checksum();
   static const int kHeaderChecksumFieldNumber = 10;
-  inline ::google::protobuf::int32 header_checksum() const;
-  inline void set_header_checksum(::google::protobuf::int32 value);
+  inline ::google::protobuf::uint32 header_checksum() const;
+  inline void set_header_checksum(::google::protobuf::uint32 value);
 
   // @@protoc_insertion_point(class_scope:rtp.Segment)
  private:
@@ -210,8 +210,8 @@ class Segment : public ::google::protobuf::Message {
   bool fin_;
   ::std::string* data_;
   ::google::protobuf::int32 receive_window_;
-  ::google::protobuf::int32 data_checksum_;
-  ::google::protobuf::int32 header_checksum_;
+  ::google::protobuf::uint32 data_checksum_;
+  ::google::protobuf::uint32 header_checksum_;
   friend void  protobuf_AddDesc_segment_2eproto();
   friend void protobuf_AssignDesc_segment_2eproto();
   friend void protobuf_ShutdownFile_segment_2eproto();
@@ -574,7 +574,7 @@ inline void Segment::set_allocated_data(::std::string* data) {
   // @@protoc_insertion_point(field_set_allocated:rtp.Segment.data)
 }
 
-// optional int32 data_checksum = 9;
+// optional uint32 data_checksum = 9;
 inline bool Segment::has_data_checksum() const {
   return (_has_bits_[0] & 0x00000100u) != 0;
 }
@@ -585,20 +585,20 @@ inline void Segment::clear_has_data_checksum() {
   _has_bits_[0] &= ~0x00000100u;
 }
 inline void Segment::clear_data_checksum() {
-  data_checksum_ = 0;
+  data_checksum_ = 0u;
   clear_has_data_checksum();
 }
-inline ::google::protobuf::int32 Segment::data_checksum() const {
+inline ::google::protobuf::uint32 Segment::data_checksum() const {
   // @@protoc_insertion_point(field_get:rtp.Segment.data_checksum)
   return data_checksum_;
 }
-inline void Segment::set_data_checksum(::google::protobuf::int32 value) {
+inline void Segment::set_data_checksum(::google::protobuf::uint32 value) {
   set_has_data_checksum();
   data_checksum_ = value;
   // @@protoc_insertion_point(field_set:rtp.Segment.data_checksum)
 }
 
-// optional int32 header_checksum = 10;
+// optional uint32 header_checksum = 10;
 inline bool Segment::has_header_checksum() const {
   return (_has_bits_[0] & 0x00000200u) != 0;
 }
@@ -609,14 +609,14 @@ inline void Segment::clear_has_header_checksum() {
   _has_bits_[0] &= ~0x00000200u;
 }
 inline void Segment::clear_header_checksum() {
-  header_checksum_ = 0;
+  header_checksum_ = 0u;
   clear_has_header_checksum();
 }
-inline ::google::protobuf::int32 Segment::header_checksum() const {
+inline ::google::protobuf::uint32 Segment::header_checksum() const {
   // @@protoc_insertion_point(field_get:rtp.Segment.header_checksum)
   return header_checksum_;
 }
-inline void Segment::set_header_checksum(::google::protobuf::int32 value) {
+inline void Segment::set_header_checksum(::google::protobuf::uint32 value) {
   set_has_header_checksum();
   header_checksum_ = value;
   // @@protoc_insertion_point(field_set:rtp.Segment.header_checksum)

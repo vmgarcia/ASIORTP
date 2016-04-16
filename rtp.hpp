@@ -14,7 +14,7 @@ namespace rtp
 	boost::uint32_t create_data_checksum(boost::shared_ptr<rtp::Segment> segment);
 	bool check_header_checksum(boost::shared_ptr<rtp::Segment> segment);
 	bool check_data_checksum(boost::shared_ptr<rtp::Segment> segment);
-	
+
 	class Connection;
 	class Acceptor;
 	class Socket :  public boost::enable_shared_from_this<Socket>

@@ -91,8 +91,8 @@ void protobuf_AddDesc_segment_2eproto() {
     "ce_port\030\001 \001(\t\022\021\n\tdest_port\030\002 \001(\t\022\023\n\013sequ"
     "ence_no\030\003 \001(\005\022\013\n\003ack\030\004 \001(\010\022\013\n\003syn\030\005 \001(\010\022"
     "\013\n\003fin\030\006 \001(\010\022\026\n\016receive_window\030\007 \001(\005\022\014\n\004"
-    "data\030\010 \001(\014\022\025\n\rdata_checksum\030\t \001(\005\022\027\n\017hea"
-    "der_checksum\030\n \001(\005", 218);
+    "data\030\010 \001(\014\022\025\n\rdata_checksum\030\t \001(\r\022\027\n\017hea"
+    "der_checksum\030\n \001(\r", 218);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "segment.proto", &protobuf_RegisterTypes);
   Segment::default_instance_ = new Segment();
@@ -149,8 +149,8 @@ void Segment::SharedCtor() {
   fin_ = false;
   receive_window_ = 0;
   data_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-  data_checksum_ = 0;
-  header_checksum_ = 0;
+  data_checksum_ = 0u;
+  header_checksum_ = 0u;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -364,12 +364,12 @@ bool Segment::MergePartialFromCodedStream(
         break;
       }
 
-      // optional int32 data_checksum = 9;
+      // optional uint32 data_checksum = 9;
       case 9: {
         if (tag == 72) {
          parse_data_checksum:
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
                  input, &data_checksum_)));
           set_has_data_checksum();
         } else {
@@ -379,12 +379,12 @@ bool Segment::MergePartialFromCodedStream(
         break;
       }
 
-      // optional int32 header_checksum = 10;
+      // optional uint32 header_checksum = 10;
       case 10: {
         if (tag == 80) {
          parse_header_checksum:
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
                  input, &header_checksum_)));
           set_has_header_checksum();
         } else {
@@ -470,14 +470,14 @@ void Segment::SerializeWithCachedSizes(
       8, this->data(), output);
   }
 
-  // optional int32 data_checksum = 9;
+  // optional uint32 data_checksum = 9;
   if (has_data_checksum()) {
-    ::google::protobuf::internal::WireFormatLite::WriteInt32(9, this->data_checksum(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(9, this->data_checksum(), output);
   }
 
-  // optional int32 header_checksum = 10;
+  // optional uint32 header_checksum = 10;
   if (has_header_checksum()) {
-    ::google::protobuf::internal::WireFormatLite::WriteInt32(10, this->header_checksum(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(10, this->header_checksum(), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -544,14 +544,14 @@ void Segment::SerializeWithCachedSizes(
         8, this->data(), target);
   }
 
-  // optional int32 data_checksum = 9;
+  // optional uint32 data_checksum = 9;
   if (has_data_checksum()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(9, this->data_checksum(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(9, this->data_checksum(), target);
   }
 
-  // optional int32 header_checksum = 10;
+  // optional uint32 header_checksum = 10;
   if (has_header_checksum()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(10, this->header_checksum(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(10, this->header_checksum(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -618,17 +618,17 @@ int Segment::ByteSize() const {
 
   }
   if (_has_bits_[8 / 32] & (0xffu << (8 % 32))) {
-    // optional int32 data_checksum = 9;
+    // optional uint32 data_checksum = 9;
     if (has_data_checksum()) {
       total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::Int32Size(
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
           this->data_checksum());
     }
 
-    // optional int32 header_checksum = 10;
+    // optional uint32 header_checksum = 10;
     if (has_header_checksum()) {
       total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::Int32Size(
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
           this->header_checksum());
     }
 

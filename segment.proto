@@ -9,6 +9,6 @@ message Segment {
 	optional bool fin = 6;
 	optional int32 receive_window = 7;
 	optional bytes data = 8;
-	optional int32 data_checksum = 9;
-	optional int32 header_checksum = 10;
+	optional uint32 data_checksum = 9;
+	optional uint32 header_checksum = 10;
 }
