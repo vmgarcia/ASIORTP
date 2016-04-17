@@ -20,9 +20,6 @@
 
 
 using boost::asio::ip::udp;
-typedef boost::shared_ptr<rtp::Segment> SegmentPtr;
-typedef std::vector<uint8_t> data_buffer;
-
 // constructor for socket
 rtp::Socket::Socket(boost::asio::io_service& io_service_, std::string source_ip, std::string source_port): 
 	io_service_(io_service_),
@@ -285,6 +282,15 @@ boost::asio::io_service& rtp::Socket::get_io_service()
 {
 	return io_service_;
 }
+
+void rtp::Socket::udp_send_to(boost::shared_ptr<std::vector<uint8_t>> message, 
+		udp::endpoint endpoint_,
+		 handler_t send_handler)
+{
+		socket_.async_send_to(boost::asio::buffer(*message), endpoint_,
+			send_handler);
+}
+
 
 void rtp::Socket::close_connection(udp::endpoint connection_endpoint)
 {

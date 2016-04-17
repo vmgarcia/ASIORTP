@@ -19,11 +19,9 @@
 
 
 using boost::asio::ip::udp;
-typedef boost::shared_ptr<rtp::Segment> SegmentPtr;
-typedef std::vector<uint8_t> data_buffer;
 
 
-rtp::Connection::Connection(udp::endpoint remote_endpoint_, boost::shared_ptr<rtp::Socket> socket_):
+rtp::Connection::Connection(udp::endpoint remote_endpoint_, boost::shared_ptr<rtp::Socket> socket_, int receive_window):
 	remote_endpoint_(remote_endpoint_),
 	socket_(socket_),
 	timer_vec(),
@@ -31,7 +29,9 @@ rtp::Connection::Connection(udp::endpoint remote_endpoint_, boost::shared_ptr<rt
 	dest_port(std::to_string(remote_endpoint_.port())),
 	sequence_no(-2),
 	valid(false),
-	timeout_exp(1)
+	timeout_exp(1),
+	receive_window(receive_window),
+	valid_handler(false)
 {
 }
 
@@ -59,6 +59,31 @@ void rtp::Connection::close_connection()
 
 }
 
+void rtp::Connection::async_send(boost::shared_ptr<data_buffer> data, boost::function<void()> send_handler)
+{
+		socket_->udp_send_to(data, remote_endpoint_, boost::bind(&rtp::Connection::handle_send_timeout, this, data,
+			boost::asio::placeholders::error, 
+			boost::asio::placeholders::bytes_transferred));
+}
+
+void rtp::Connection::async_rcv(boost::shared_ptr<data_buffer> data, boost::function<void()> rcv_handler)
+{
+
+}
+
+void rtp::Connection::handle_send_timeout(boost::shared_ptr<data_buffer> message,
+			const boost::system::error_code& /*error*/, 
+			std::size_t /*bytes_transferred*/)
+{
+}
+
+void rtp::Connection::handle_rcv_timeout(boost::shared_ptr<data_buffer> message,
+	const boost::system::error_code& error,
+	std::size_t bytes_transferred)
+{
+
+}
+
 boost::shared_ptr<boost::asio::deadline_timer> rtp::Connection::new_timer(
 	boost::asio::io_service& io, 
 	boost::posix_time::milliseconds milliseconds)
@@ -76,11 +101,7 @@ void rtp::Connection::delete_timer(boost::shared_ptr<boost::asio::deadline_timer
 
 }
 
-void rtp::Connection::handle_send(boost::shared_ptr<data_buffer> /*message*/,
-			const boost::system::error_code& /*error*/, 
-			std::size_t /*bytes_transferred*/)
-{
-}
+
 
 int rtp::Connection::get_sequence_no()
 {
