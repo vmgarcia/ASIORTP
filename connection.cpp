@@ -21,7 +21,7 @@
 using boost::asio::ip::udp;
 
 
-rtp::Connection::Connection(udp::endpoint remote_endpoint_, boost::shared_ptr<rtp::Socket> socket_, int receive_window):
+rtp::Connection::Connection(udp::endpoint remote_endpoint_, boost::shared_ptr<rtp::Socket> socket_, unsigned window_size):
 	remote_endpoint_(remote_endpoint_),
 	socket_(socket_),
 	timer_vec(),
@@ -30,8 +30,11 @@ rtp::Connection::Connection(udp::endpoint remote_endpoint_, boost::shared_ptr<rt
 	sequence_no(-2),
 	valid(false),
 	timeout_exp(1),
-	receive_window(receive_window),
-	valid_handler(false)
+	window_size(window_size),
+	rcv_window(boost::make_shared<data_buffer>(0)),
+	valid_rcv_handler(false),
+	valid_send_handler(false)
+
 {
 }
 
@@ -59,23 +62,106 @@ void rtp::Connection::close_connection()
 
 }
 
-void rtp::Connection::async_send(boost::shared_ptr<data_buffer> data, boost::function<void()> send_handler)
+void rtp::Connection::async_send(boost::shared_ptr<data_buffer> data_buff, boost::function<void()> send_handler)
 {
-		socket_->udp_send_to(data, remote_endpoint_, boost::bind(&rtp::Connection::handle_send_timeout, this, data,
-			boost::asio::placeholders::error, 
-			boost::asio::placeholders::bytes_transferred));
+	set_send_handler(data_buff, send_handler);
+	call_send_handler();
+
+
 }
 
-void rtp::Connection::async_rcv(boost::shared_ptr<data_buffer> data, boost::function<void()> rcv_handler)
+void rtp::Connection::set_send_handler(boost::shared_ptr<data_buffer> write_buff_, boost::function<void()> send_handler)
 {
+	this->send_handler = send_handler;
+	write_buff = write_buff_;
+	valid_send_handler = true;
 
+}
+
+void rtp::Connection::call_send_handler()
+{
+	if (valid_send_handler && is_valid())
+	{
+		std::cout << "SENDING ASYNC STUFF" <<std::endl;
+		socket_->udp_send_to(write_buff, remote_endpoint_, boost::bind(&rtp::Connection::handle_send_timeout, this, write_buff,
+			boost::asio::placeholders::error, 
+			boost::asio::placeholders::bytes_transferred));
+		send_handler();
+		valid_send_handler = false;
+	}
 }
 
 void rtp::Connection::handle_send_timeout(boost::shared_ptr<data_buffer> message,
 			const boost::system::error_code& /*error*/, 
 			std::size_t /*bytes_transferred*/)
 {
+	std::cout << "handle send timeout" <<std::endl;
 }
+
+void rtp::Connection::async_rcv(boost::shared_ptr<data_buffer> data_buff, boost::function<void()> rcv_handler)
+{
+	set_rcv_handler(data_buff, rcv_handler);
+	if (rcv_window->size() > 0)
+	{
+		call_rcv_handler();
+	}
+
+}
+
+
+
+
+void rtp::Connection::set_rcv_handler(boost::shared_ptr<data_buffer> pass_back_buffer_, boost::function<void()> rcv_handler)
+{
+	this->rcv_handler = rcv_handler;
+	pass_back_buffer = pass_back_buffer_;
+	valid_rcv_handler = true;
+
+}
+
+void rtp::Connection::call_rcv_handler()
+{
+	if (valid_rcv_handler)
+	{
+		pass_back_buffer->insert(pass_back_buffer->begin(), rcv_window->begin(), rcv_window->end());
+		rcv_window->clear();
+		rcv_handler();
+		valid_rcv_handler = false;
+	}
+}
+
+void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
+{
+	// int buffer_position(0);
+	// PackedMessage<rtp::Segment> m_packed_segment(boost::make_shared<rtp::Segment>());
+	// //std::cout << show_hex(*m_readbuf) <<std::endl;
+
+ //    unsigned msg_len = m_packed_segment.decode_header(*m_readbuf, buffer_position);
+ //    //buffer_position += HEADER_SIZE;
+
+ //    m_packed_segment.unpack(*m_readbuf, msg_len, buffer_position);
+	// SegmentPtr rcvdseg = m_packed_segment.get_msg();
+
+	//if (check_header_checksum(rcvdseg) && check_data_checksum(rcvdseg))
+	//{
+		// std::string data_s(rcvdseg->data());
+		std::cout << "DATAAAAAADATAAAA" << std::endl;
+		// std::cout << data_s <<std::endl;
+		// if (rcv_window->size() + data_s.size()  < window_size)
+		if (rcv_window->size() + m_readbuf->size()  < window_size)
+		{
+			// rcv_window->insert(rcv_window->end(), data_s.begin(), data_s.end());
+
+			rcv_window->insert(rcv_window->end(), m_readbuf->begin(), m_readbuf->end());
+
+		}
+
+	//}
+	call_rcv_handler();
+
+}
+
+
 
 void rtp::Connection::handle_rcv_timeout(boost::shared_ptr<data_buffer> message,
 	const boost::system::error_code& error,
@@ -83,6 +169,8 @@ void rtp::Connection::handle_rcv_timeout(boost::shared_ptr<data_buffer> message,
 {
 
 }
+
+
 
 boost::shared_ptr<boost::asio::deadline_timer> rtp::Connection::new_timer(
 	boost::asio::io_service& io, 

@@ -34,6 +34,9 @@ namespace rtp
 			boost::asio::ip::udp::endpoint endpoint_,
 			handler_t send_handler);
 
+		void create_receiver(boost::function<void(boost::shared_ptr<rtp::Connection>)> receiver_);
+
+
 	private:
 		void multiplex(boost::shared_ptr<data_buffer> dbuf, const boost::system::error_code& error, 
 			std::size_t bytes_transferred);
@@ -68,12 +71,14 @@ namespace rtp
 		boost::asio::ip::udp::endpoint remote_endpoint_;
 		std::string source_port;
 		std::string source_ip;
+		bool is_server;
+		boost::function<void(boost::shared_ptr<rtp::Connection>)> receiver;
 	};
 
 	class Connection
 	{
 	public:
-		Connection(boost::asio::ip::udp::endpoint remote_endpoint_, boost::shared_ptr<rtp::Socket> socket_, int receive_window=20000);
+		Connection(boost::asio::ip::udp::endpoint remote_endpoint_, boost::shared_ptr<rtp::Socket> socket_, unsigned window_size=20000);
 		bool is_valid();
 		void set_valid(bool val);
 		void handle_send_timeout(boost::shared_ptr<data_buffer> message,
@@ -96,12 +101,16 @@ namespace rtp
 			boost::posix_time::milliseconds milliseconds);
 		void delete_timer(boost::shared_ptr<boost::asio::deadline_timer> timer);
 		void async_receive(boost::function<void()> accept_handler);
-		void async_send(boost::shared_ptr<data_buffer> data, boost::function<void()> send_handler);
-		void async_rcv(boost::shared_ptr<data_buffer> data, boost::function<void()> rcv_handler);
+		void async_send(boost::shared_ptr<data_buffer> data_buff, boost::function<void()> send_handler);
+		void async_rcv(boost::shared_ptr<data_buffer> data_buff, boost::function<void()> rcv_handler);
+		void handle_rcv(boost::shared_ptr<data_buffer> message);
+		void set_rcv_handler(boost::shared_ptr<data_buffer> data_buff, boost::function<void()> rcv_handler);
+		void call_rcv_handler();
+		void set_send_handler(boost::shared_ptr<data_buffer> data_buff, boost::function<void()> send_handler);
+		void call_send_handler();
+
 
 	private:
-		std::shared_ptr<data_buffer> write_buff;
-		std::shared_ptr<data_buffer> rcv_buff;
 		boost::asio::ip::udp::endpoint remote_endpoint_;
 		boost::shared_ptr<rtp::Socket> socket_;
 		std::vector<boost::shared_ptr<boost::asio::deadline_timer>> timer_vec;
@@ -113,9 +122,14 @@ namespace rtp
 		bool valid;
 		int timeout_exp;
 		int congestion_window;
-		int receive_window;
-		boost::function<void()> receive_handler;
-		bool valid_handler;
+		unsigned window_size;
+		boost::shared_ptr<data_buffer> rcv_window;
+		boost::function<void()> rcv_handler;
+		bool valid_rcv_handler;
+		boost::shared_ptr<data_buffer> write_buff;
+		boost::function<void()> send_handler;
+		bool valid_send_handler;
+		boost::shared_ptr<data_buffer> pass_back_buffer;
 
 	};
 
