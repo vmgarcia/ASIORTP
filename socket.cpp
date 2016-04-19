@@ -26,7 +26,8 @@ rtp::Socket::Socket(boost::asio::io_service& io_service_, std::string source_ip,
 	socket_(io_service_, udp::endpoint(boost::asio::ip::address::from_string(source_ip), std::stoi(source_port))),
 	source_port(source_port),
 	source_ip(source_ip),
-	is_server(false)
+	is_server(false),
+	valid(true)
 {
 	// accept incoming rtp segments
 	std::cout << rtp::get_endpoint_str(socket_.local_endpoint()) << std::endl; 
@@ -39,39 +40,51 @@ rtp::Socket::Socket(boost::asio::io_service& io_service_, std::string source_ip,
  */
 void rtp::Socket::start_receive()
 {
-	boost::shared_ptr<data_buffer> tmp_buf = boost::make_shared<data_buffer>(1000);
-	socket_.async_receive_from(boost::asio::buffer(*tmp_buf), remote_endpoint_, 
-		boost::bind(&rtp::Socket::multiplex, this,
+	if(valid)
+	{
+		boost::shared_ptr<data_buffer> tmp_buf = boost::make_shared<data_buffer>(1000);
+		socket_.async_receive_from(boost::asio::buffer(*tmp_buf), remote_endpoint_, 
+			boost::bind(&rtp::Socket::multiplex, this,
 			tmp_buf,
 			boost::asio::placeholders::error, 
 			boost::asio::placeholders::bytes_transferred));
+	}
+
+}
+
+void rtp::Socket::delete_connection(udp::endpoint endpoint_)
+{
+	connections.erase(rtp::get_endpoint_str(endpoint_));
+
 
 }
 
 void rtp::Socket::multiplex(boost::shared_ptr<data_buffer> tmp_buf,
 	const boost::system::error_code& error,
-	std::size_t /*bytes_transferred*/)
+	std::size_t bytes_transferred)
 {
 	std::string identifier = rtp::get_endpoint_str(remote_endpoint_);
-	
-	if (connections.count(identifier) == 0 )  // connection not in list of connections
+	if (bytes_transferred)
 	{
-		boost::shared_ptr<Connection> connection = boost::make_shared<Connection>(remote_endpoint_, shared_from_this());
-		connections.insert({rtp::get_endpoint_str(remote_endpoint_), connection});
-		std::cout << rtp::get_endpoint_str(remote_endpoint_) << std::endl;
-		connection_establishment(tmp_buf, connections.at(identifier));
+		if (connections.count(identifier) == 0 )  // connection not in list of connections
+		{
+			boost::shared_ptr<Connection> connection = boost::make_shared<Connection>(remote_endpoint_, shared_from_this());
+			connections.insert({rtp::get_endpoint_str(remote_endpoint_), connection});
+			std::cout << rtp::get_endpoint_str(remote_endpoint_) << std::endl;
+			connection_establishment(tmp_buf, connections.at(identifier));
 
 
-	}
-	else if(!(connections.at(identifier)->is_valid())) // connection hasn't been completely established yet
-	{
-		std::cout << "Not valid yet" << std::endl;
+		}
+		else if(!(connections.at(identifier)->is_valid())) // connection hasn't been completely established yet
+		{
+			//std::cout << "Not valid yet" << std::endl;
 
-		connection_establishment(tmp_buf, connections.at(identifier));
-	}
-	else
-	{
-		connections.at(identifier)->handle_rcv(tmp_buf);
+			connection_establishment(tmp_buf, connections.at(identifier));
+		}
+		else
+		{
+			connections.at(identifier)->handle_rcv(tmp_buf);
+		}
 	}
     start_receive();
 
@@ -89,7 +102,7 @@ boost::shared_ptr<rtp::Connection> rtp::Socket::create_connection(std::string ip
 	connections.insert({rtp::get_endpoint_str(remote_endpoint_), connection});
 
 	PackedMessage<rtp::Segment> m_packed_segment = boost::make_shared<rtp::Segment>();
-	boost::shared_ptr<data_buffer> message = boost::make_shared<data_buffer>();
+	boost::shared_ptr<data_buffer> message = boost::make_shared<data_buffer>(0);
 	SegmentPtr synseg= boost::make_shared<rtp::Segment>();
 	synseg->set_syn(true);
 	std::cout<<synseg->ack()<<std::endl;
@@ -100,7 +113,7 @@ boost::shared_ptr<rtp::Connection> rtp::Socket::create_connection(std::string ip
 	PackedMessage<rtp::Segment> initialack(synseg);
 	initialack.pack(*message);
 
-	// unsigned size = initialack.decode_header(*message, 0);
+	// int size = initialack.decode_header(*message, 0);
 	// initialack.unpack(*message, size, 0);
 	// SegmentPtr ackseg2 = initialack.get_msg();
 	// std::cout <<ackseg->ack() << std::endl;
@@ -122,7 +135,7 @@ void rtp::Socket::connection_establishment(boost::shared_ptr<data_buffer> m_read
 	PackedMessage<rtp::Segment> m_packed_segment(boost::make_shared<rtp::Segment>());
 	//`std::cout << show_hex(*m_readbuf) <<std::endl;
 
-    unsigned msg_len = m_packed_segment.decode_header(*m_readbuf, buffer_position);
+    int msg_len = m_packed_segment.decode_header(*m_readbuf, buffer_position);
     //buffer_position += HEADER_SIZE;
 
     m_packed_segment.unpack(*m_readbuf, msg_len, buffer_position);
@@ -197,7 +210,7 @@ void rtp::Socket::connection_establishment(boost::shared_ptr<data_buffer> m_read
 	    		receiver(connection);
 	    	}
 		    if(DEBUG) std::cout << "sent ack" <<std::endl;
-		    connection->call_send_handler();
+		    connection->send();
 
 	    }
 	    else if (rcvdseg->ack() && rcvdseg->sequence_no() == 0)
@@ -209,7 +222,11 @@ void rtp::Socket::connection_establishment(boost::shared_ptr<data_buffer> m_read
 	    	{
 	    		receiver(connection);
 	    	}
-	    	connection->call_send_handler();
+	    	connection->send();
+	    }
+	    else
+	    {
+	    	connections.erase(rtp::get_endpoint_str(connection->get_endpoint()));	
 	    }
 	}
     
@@ -246,7 +263,7 @@ void rtp::Socket::handle_connection_est(boost::shared_ptr<data_buffer> message,
 	const boost::system::error_code& error,
 	std::size_t bytes_transferred)
 {
-	timer->expires_at(timer->expires_at() + boost::posix_time::seconds(2));
+	timer->expires_at(timer->expires_at() + boost::posix_time::milliseconds(200));
 
 	timer->async_wait(boost::bind(&rtp::Socket::handle_connection_timeout, this,
 		message,
@@ -283,10 +300,8 @@ void rtp::Socket::handle_connection_timeout(boost::shared_ptr<std::vector<uint8_
 	    		boost::asio::placeholders::error,
 	    		boost::asio::placeholders::bytes_transferred));
 	}
-
 	else
 	{
-
 		if (error)
 		{
 			std::cout << "There was an error in connection establishment, closing timer" << std::endl;
@@ -309,10 +324,11 @@ void rtp::Socket::udp_send_to(boost::shared_ptr<std::vector<uint8_t>> message,
 }
 
 
-void rtp::Socket::close_connection(udp::endpoint connection_endpoint)
+void rtp::Socket::close()
 {
-	// connections.
+	valid = false;
 }
+
 /**
  *	Get remote peer ip and port in string "<ip>:<port>"
  */
@@ -369,41 +385,54 @@ bool rtp::check_header_checksum(SegmentPtr segment)
 {
 	boost::uint32_t sent_checksum = segment->header_checksum();
 	boost::uint32_t calculated_checksum = create_header_checksum(segment);
-	bool val = sent_checksum == calculated_checksum;
-	std::cout << "Checksum is " << val <<std::endl;
-	std::cout << sent_checksum << std::endl;
-	std::cout << calculated_checksum << std::endl;
+	// bool val = sent_checksum == calculated_checksum;
+	// std::cout << "Checksum is " << val <<std::endl;
+	// std::cout << sent_checksum << std::endl;
+	// std::cout << calculated_checksum << std::endl;
 	return sent_checksum == calculated_checksum; 
 
 }
 
 boost::uint32_t rtp::create_data_checksum(SegmentPtr segment)
 {
-	std::string data_str = segment->data();
-	uint8_t* data_bytes = reinterpret_cast<uint8_t*>(const_cast<char*>(data_str.c_str()));
+	std::vector<uint8_t> data(segment->data().begin(), segment->data().end());
+	uint8_t* data_bytes = &data[0];
 	boost::uint32_t checksum = create_checksum(data_bytes);
 	return checksum;
 }
 
 bool rtp::check_data_checksum(SegmentPtr segment)
 {
-	boost::uint32_t sent_checksum = segment->data_checksum();
-	boost::uint32_t calculated_checksum = create_data_checksum(segment);
-
-	return sent_checksum == calculated_checksum;
+	if (segment->data().size() > 0)
+	{
+		boost::uint32_t sent_checksum = segment->data_checksum();
+		boost::uint32_t calculated_checksum = create_data_checksum(segment);
+		bool res = sent_checksum == calculated_checksum;
+		std::cout << res << std::endl;
+		return sent_checksum == calculated_checksum;
+	}
+	else if (segment->data_checksum())
+	{
+		return false;
+	}
+	return true;
 }
 
 
-void test_send()
+void test_send(boost::shared_ptr<rtp::Connection> conn, boost::shared_ptr<rtp::Socket> socket_)
 {
 	std::cout<<"Send"<<std::endl;
+	conn->close_connection();
+	socket_->close();
+
 }
 
 void test_rcv(boost::shared_ptr<data_buffer> data)
 {
 	std::string rcvd(data->begin(), data->end());
-	std::cout <<rcvd<<std::endl;
 	std::cout<<"RECEIVED"<<std::endl;
+
+	std::cout <<rcvd<<std::endl;
 }
 void test_rcv_handler(boost::shared_ptr<rtp::Connection> conn)
 {
@@ -433,14 +462,11 @@ int main(int argc, char* argv[])
 		std::cout << "CREATING CONNECTION" <<std::endl;
 		std::string msg("Hello");
 		boost::shared_ptr<data_buffer> buf(boost::make_shared<data_buffer>(msg.begin(), msg.end()));
-		std::string test(buf->begin(), buf->end());
-		std::cout << test <<std::endl;
-		conn->async_send(buf, &test_send);
+		conn->async_send(buf, boost::bind(&test_send, conn, socket));
 
 
 	}
 	io_service_.run();
-	std::cout << "fuk" << std::endl;
 	return 0;
 
 }

@@ -1,8 +1,9 @@
 #ifndef RTP_H
 #define RTP_H
 
-#define DEBUG true
-#define BUFFER_SIZE 10000
+#define DEBUG false
+#define MAX_DATAGRAM_SIZE 65000
+#define MAX_TIMEOUT_COUNT 25
 
 namespace rtp
 {
@@ -28,13 +29,15 @@ namespace rtp
 		boost::asio::io_service& get_io_service();
 		void start_receive();
 		boost::shared_ptr<Socket> this_shared();
-		void close_connection(boost::asio::ip::udp::endpoint connection_endpoint);
+		void delete_connection(boost::asio::ip::udp::endpoint connection_endpoint);
 
 		void udp_send_to(boost::shared_ptr<data_buffer> message, 
 			boost::asio::ip::udp::endpoint endpoint_,
 			handler_t send_handler);
 
 		void create_receiver(boost::function<void(boost::shared_ptr<rtp::Connection>)> receiver_);
+		void close();
+
 
 
 	private:
@@ -73,19 +76,47 @@ namespace rtp
 		std::string source_ip;
 		bool is_server;
 		boost::function<void(boost::shared_ptr<rtp::Connection>)> receiver;
+		bool valid;
 	};
 
 	class Connection
 	{
 	public:
-		Connection(boost::asio::ip::udp::endpoint remote_endpoint_, boost::shared_ptr<rtp::Socket> socket_, unsigned window_size=20000);
+		Connection(boost::asio::ip::udp::endpoint remote_endpoint_, boost::shared_ptr<rtp::Socket> socket_, int window_size=20000);
 		bool is_valid();
 		void set_valid(bool val);
+
+		void handle_send(boost::shared_ptr<data_buffer> message, int next_seq_no,
+			const boost::system::error_code& error,
+			std::size_t bytes_transferred);
+
+
+		void handle_send(boost::shared_ptr<data_buffer> message,
+			int next_seq_no,
+			boost::shared_ptr<boost::asio::deadline_timer> timer, 
+			const boost::system::error_code& error,
+			std::size_t bytes_transferred);
+
 		void handle_send_timeout(boost::shared_ptr<data_buffer> message,
+			int next_seq_no,
+			boost::shared_ptr<boost::asio::deadline_timer> timer,
 			const boost::system::error_code& error, 
 			std::size_t bytes_transferred);
 
-		void handle_rcv_timeout(boost::shared_ptr<data_buffer> message,
+		void handle_ack(boost::shared_ptr<data_buffer> message, int next_seq_no,
+			const boost::system::error_code& error,
+			std::size_t bytes_transferred);
+
+
+		void handle_ack(boost::shared_ptr<data_buffer> message,
+			int next_seq_no,
+			boost::shared_ptr<boost::asio::deadline_timer> timer, 
+			const boost::system::error_code& error,
+			std::size_t bytes_transferred);
+
+		void handle_ack_timeout(boost::shared_ptr<data_buffer> message,
+			int next_seq_no,
+			boost::shared_ptr<boost::asio::deadline_timer> timer,
 			const boost::system::error_code& error, 
 			std::size_t bytes_transferred);
 
@@ -94,9 +125,6 @@ namespace rtp
 		void inc_sequence_no();
 		boost::asio::ip::udp::endpoint get_endpoint();
 		void close_connection();
-		void inc_timeout_exp();
-		int get_timeout_seconds();
-		void reset_timeout();
 		boost::shared_ptr<boost::asio::deadline_timer> new_timer(boost::asio::io_service& io, 
 			boost::posix_time::milliseconds milliseconds);
 		void delete_timer(boost::shared_ptr<boost::asio::deadline_timer> timer);
@@ -108,6 +136,16 @@ namespace rtp
 		void call_rcv_handler();
 		void set_send_handler(boost::shared_ptr<data_buffer> data_buff, boost::function<void()> send_handler);
 		void call_send_handler();
+		boost::shared_ptr<data_buffer> package_message();
+		void send();
+		void send_ack();
+		void handle_fin();
+		void handle_fin(const boost::system::error_code& error, 
+			std::size_t bytes_transferred);
+		void wait_for_death();
+		void inc_timeout();
+		void reset_timeout();
+
 
 
 	private:
@@ -122,7 +160,7 @@ namespace rtp
 		bool valid;
 		int timeout_exp;
 		int congestion_window;
-		unsigned window_size;
+		int window_size;
 		boost::shared_ptr<data_buffer> rcv_window;
 		boost::function<void()> rcv_handler;
 		bool valid_rcv_handler;
@@ -130,20 +168,11 @@ namespace rtp
 		boost::function<void()> send_handler;
 		bool valid_send_handler;
 		boost::shared_ptr<data_buffer> pass_back_buffer;
+		int timeout_count;
 
 	};
 
-	// class Acceptor
-	// {
-	// public:
-	// 	Acceptor(boost::asio::io_service io_service_, boost::asio::ip::udp::endpoint endpoint_);
-	// 	
 
-	// private:
-	// 	void receive_final_ack(const boost::system::error_Code& error);
-	// 	boost::asio::io_service io_service_;
-	// 	boost::asio::ip::udp::endpoint endpoint_;
-	// };
 };
 
 #endif
