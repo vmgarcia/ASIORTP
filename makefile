@@ -15,7 +15,17 @@ debug:
 	$(CC) $(CXXFLAGS) -I $(BOOST) dbclient.cpp -o dbclient -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
 
 rtp:
-	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) socket.cpp connection.cpp segment.pb.cc -o rtp -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
+	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) test1.cpp socket.cpp connection.cpp segment.pb.cc -o rtp -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
 
-test:
-	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) test1.cpp -o test1 -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
+
+ftaclient:
+	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) ftaclient.cpp socket.cpp connection.cpp segment.pb.cc -o ftaclient -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
+
+ftaserver:
+	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) ftaserver.cpp socket.cpp connection.cpp segment.pb.cc -o ftaserver -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
+
+rem:
+	/opt/rh/devtoolset-2/root/usr/bin/g++ \
+	 -pthread -I/nethome/vgarcia7/proto/include $(DEBUG) -I/nethome/vgarcia7/boost_1_60_0 \
+	 test1.cpp socket.cpp connection.cpp segment.pb.cc -o rtp -L/nethome/vgarcia7/boost_1_60_0/stage/lib \
+	 $(LIBS) -Wl,-rpath,/nethome/vgarcia7/boost_1_60_0/stage/lib -Wl,-rpath -Wl,/nethome/vgarcia7/proto/lib -lprotobuf -lpthread2> error.txt

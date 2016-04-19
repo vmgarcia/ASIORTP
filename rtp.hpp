@@ -1,9 +1,10 @@
 #ifndef RTP_H
 #define RTP_H
 
-#define DEBUG false
+#define DEBUG true
+#define DEBUG2 false
 #define MAX_DATAGRAM_SIZE 65000
-#define MAX_TIMEOUT_COUNT 25
+#define MAX_TIMEOUT_COUNT 5
 
 namespace rtp
 {

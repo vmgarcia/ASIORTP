@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <fstream>
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/cstdint.hpp>
@@ -41,20 +42,24 @@ rtp::Connection::Connection(udp::endpoint remote_endpoint_, boost::shared_ptr<rt
 
 bool rtp::Connection::is_valid()
 {
-	if (DEBUG && valid) 
-	{
-		std::cout << "is valid"<<std::endl;
-	}
-	else if (DEBUG)
-	{
-		std::cout << "not valid" << std::endl;
-	}
+	// if (DEBUG && valid) 
+	// {
+	// 	std::cout << "is valid"<<std::endl;
+	// }
+	// else if (DEBUG)
+	// {
+	// 	std::cout << "not valid" << std::endl;
+	// }
 	return valid;
 }
 
 void rtp::Connection::set_valid(bool val)
 {
-	//if(DEBUG) std::cerr << "Connection Created" << std::endl;
+	if(DEBUG && val) std::cerr << "Connection Created: " << rtp::get_endpoint_str(remote_endpoint_) 
+		<< std::endl;
+	if(DEBUG && !val) std::cerr << "Connection Destroyed: " << rtp::get_endpoint_str(remote_endpoint_) 
+		<<std::endl;
+	reset_timeout();
 	valid = val;
 }
 
@@ -63,11 +68,17 @@ void rtp::Connection::close_connection()
 	set_valid(false);
 	boost::shared_ptr<data_buffer> message = boost::make_shared<data_buffer>(0);
 	SegmentPtr finseg= boost::make_shared<rtp::Segment>();
+	sequence_no = -2;
+	timeout_count = 0;
 	finseg->set_fin(true);
 	finseg->set_header_checksum(create_header_checksum(finseg));
 	PackedMessage<rtp::Segment> packeddata(finseg);
 	packeddata.pack(*message);
 
+	for (int i = 0; (unsigned) i < timer_vec.size(); i++)
+	{
+		timer_vec[i]->cancel();
+	}
 	socket_->udp_send_to(message, remote_endpoint_, boost::bind(&rtp::Connection::handle_fin, this,
 		boost::asio::placeholders::error, 
 		boost::asio::placeholders::bytes_transferred));
@@ -119,6 +130,7 @@ void rtp::Connection::send()
 	{
 
 		boost::shared_ptr<data_buffer> message(package_message());
+		std::cout<<"SENDING PART OF IT" <<std::endl;
 		socket_->udp_send_to(message, remote_endpoint_, boost::bind(&rtp::Connection::handle_send, this, message,
 			sequence_no,
 			boost::asio::placeholders::error, 
@@ -225,6 +237,13 @@ boost::shared_ptr<data_buffer> rtp::Connection::package_message()
 			dataseg->set_sequence_no(write_index);
 			std::string data(tmp_buff->begin(), tmp_buff->end());
 			dataseg->set_data(data);
+			if (DEBUG)
+			{
+				// std::cout<< "PACKING THIS DATA \n";
+				// std::cout <<dataseg->data()<<std::endl;
+				std::cout << "SEQUENCE NO OF THIS DATA\n";
+				std::cout << dataseg->sequence_no() <<std::endl;
+			}
 			dataseg->set_header_checksum(create_header_checksum(dataseg));
 			dataseg->set_data_checksum(create_data_checksum(dataseg));
 			PackedMessage<rtp::Segment> packeddata(dataseg);
@@ -249,6 +268,7 @@ void rtp::Connection::async_rcv(boost::shared_ptr<data_buffer> data_buff, boost:
 	set_rcv_handler(data_buff, rcv_handler);
 	if (rcv_window->size() > 0)
 	{
+		if(DEBUG2) std::cout << "GOT TO THE RCV HANDLER" <<std::endl;
 		call_rcv_handler();
 	}
 
@@ -269,10 +289,27 @@ void rtp::Connection::call_rcv_handler()
 {
 	if (valid_rcv_handler)
 	{
+		if (DEBUG && false)
+		{
+			std::ofstream writer;
+			writer.open("copy3.txt", std::ios_base::app |std::ios::ate |std::ios::out);
+			for (unsigned i =0; i < rcv_window->size(); i++)
+			{
+				writer << (*rcv_window)[i];
+			}
+			writer << std::endl;
+		}
+		if (DEBUG2)
+		{
+			std::string dat(rcv_window->begin(), rcv_window->end());
+			std::cout << "PUTTING THIS IN PASS_BACK_BUFFER" << std::endl;
+			std::cout << dat <<std::endl;
+		}
 		pass_back_buffer->insert(pass_back_buffer->begin(), rcv_window->begin(), rcv_window->end());
-		rcv_window->clear();
-		rcv_handler();
+		rcv_window = boost::make_shared<data_buffer>(0);
 		valid_rcv_handler = false;
+
+		rcv_handler();
 	}
 }
 
@@ -294,7 +331,11 @@ void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
 		{
 			if (rcvdseg->ack())
 			{
-				sequence_no = rcvdseg->sequence_no();
+				if (DEBUG) std::cout << "RECEIVED ACK FOR: " << rcvdseg->sequence_no() <<std::endl;
+				if (rcvdseg->sequence_no() >= sequence_no)
+				{
+					sequence_no = rcvdseg->sequence_no();
+				}
 				congestion_window += 1;
 				send();
 				reset_timeout();
@@ -311,13 +352,21 @@ void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
 
 					// rcv_window->insert(rcv_window->end(), m_readbuf->begin(), m_readbuf->end());
 					sequence_no += (int)data_s.size();
+					if(DEBUG)
+					{
+						std::cout << "SEQUENCE NO OF THIS DATA" << "\n";
+						std::cout << rcvdseg->sequence_no() << "\n";
+						std::cout << "INCREASE SEQUENCE NO " << sequence_no << "\n";
+						// std::cout << "RECEIVED THIS DATA\n";
+						// std::cout << rcvdseg->data() <<std::endl;
+					}	
 				}
 				reset_timeout();
 			}
-			else if (rcvdseg->fin())
-			{
-				handle_fin();
-			}
+			// else if (rcvdseg->fin())
+			// {
+			// 	handle_fin();
+			// }
 			else
 			{
 				break;
@@ -327,9 +376,9 @@ void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
 		{
 			break;
 		}
-		std::cout << m_readbuf->size() <<std::endl;
-		std::cout << buffer_position <<std::endl;
-		std::cout << "____________________________________________-" << std::endl;
+		// std::cout << m_readbuf->size() <<std::endl;
+		// std::cout << buffer_position <<std::endl;
+		// std::cout << "____________________________________________" << std::endl;
 
 		buffer_position+=msg_len + HEADER_SIZE;
 	}
@@ -349,7 +398,10 @@ void rtp::Connection::send_ack()
 	SegmentPtr ackseg= boost::make_shared<rtp::Segment>();
 	ackseg->set_ack(true);
 	ackseg->set_sequence_no(sequence_no);
-	std::cout << "ACK " << sequence_no <<std::endl;
+	if(DEBUG)
+	{
+		std::cout << "ACK " << sequence_no <<std::endl;
+	}
 	ackseg->set_header_checksum(create_header_checksum(ackseg));
 	PackedMessage<rtp::Segment> packeddata(ackseg);
 	packeddata.pack(*ack);
@@ -401,7 +453,13 @@ void rtp::Connection::handle_ack_timeout(boost::shared_ptr<data_buffer> message,
 {
 	if (is_valid())
 	{
-		if(DEBUG) std::cout << "GOT TO HANDLE CONNECTION TIMEOUT" <<std::endl;
+		if(DEBUG) 
+		{
+			std::cout << "GOT TO HANDLE CONNECTION TIMEOUT" <<std::endl;
+			std::cout << sequence_no << std::endl;
+			std::cout << next_seq_no << std::endl;
+		}
+
 		if (sequence_no <= next_seq_no && !error)
 		{
 
@@ -410,13 +468,7 @@ void rtp::Connection::handle_ack_timeout(boost::shared_ptr<data_buffer> message,
 				std::cout << "Timeout occurred at sequence_no " << next_seq_no << std::endl;
 				std::cout << "Resending ack from " << sequence_no << std::endl;
 			}
-		    socket_->udp_send_to(message, remote_endpoint_,
-		    	boost::bind(&rtp::Connection::handle_ack, this,
-		    		message,
-		    		next_seq_no,
-		    		timer,
-		    		boost::asio::placeholders::error,
-		    		boost::asio::placeholders::bytes_transferred));
+			send_ack();
 		    inc_timeout();
 		}
 
@@ -445,6 +497,7 @@ boost::shared_ptr<boost::asio::deadline_timer> rtp::Connection::new_timer(
 
 void rtp::Connection::delete_timer(boost::shared_ptr<boost::asio::deadline_timer> timer)
 {
+	timer->cancel();
 	auto it = std::find(timer_vec.begin(), timer_vec.end(), timer);
 	if(it != timer_vec.end())
 	    timer_vec.erase(it);
@@ -481,7 +534,7 @@ void rtp::Connection::inc_timeout()
 	}
 	else
 	{
-		handle_fin();
+		set_valid(false);
 	}
 }
 
