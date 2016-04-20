@@ -5,7 +5,7 @@
 #define DEBUG2 false
 #define MAX_DATAGRAM_SIZE 65000
 #define MAX_TIMEOUT_COUNT 5
-
+#define DEFAULT_WINDOW_SIZE 20000
 namespace rtp
 {
 
@@ -146,6 +146,8 @@ namespace rtp
 		void wait_for_death();
 		void inc_timeout();
 		void reset_timeout();
+		void inc_congestion();
+		void dec_congestion();
 
 
 

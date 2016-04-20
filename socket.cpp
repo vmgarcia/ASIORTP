@@ -63,31 +63,34 @@ void rtp::Socket::multiplex(boost::shared_ptr<data_buffer> tmp_buf,
 	const boost::system::error_code& error,
 	std::size_t bytes_transferred)
 {
-	std::string identifier = rtp::get_endpoint_str(remote_endpoint_);
-	if (bytes_transferred)
+	if (valid)
 	{
-		if (connections.count(identifier) == 0 )  // connection not in list of connections
+		std::string identifier = rtp::get_endpoint_str(remote_endpoint_);
+		if (bytes_transferred)
 		{
-			boost::shared_ptr<Connection> connection = boost::make_shared<Connection>(remote_endpoint_, shared_from_this());
-			connections.insert({rtp::get_endpoint_str(remote_endpoint_), connection});
-			// std::cout << rtp::get_endpoint_str(remote_endpoint_) << std::endl;
-			connection_establishment(tmp_buf, connections.at(identifier));
+			if (connections.count(identifier) == 0 )  // connection not in list of connections
+			{
+				boost::shared_ptr<Connection> connection = boost::make_shared<Connection>(remote_endpoint_, shared_from_this());
+				connections.insert({rtp::get_endpoint_str(remote_endpoint_), connection});
+				// std::cout << rtp::get_endpoint_str(remote_endpoint_) << std::endl;
+				connection_establishment(tmp_buf, connections.at(identifier));
 
+
+			}
+			else if(!(connections.at(identifier)->is_valid())) // connection hasn't been completely established yet
+			{
+				//std::cout << "Not valid yet" << std::endl;
+
+				connection_establishment(tmp_buf, connections.at(identifier));
+			}
+			else
+			{
+				connections.at(identifier)->handle_rcv(tmp_buf);
+			}
 
 		}
-		else if(!(connections.at(identifier)->is_valid())) // connection hasn't been completely established yet
-		{
-			//std::cout << "Not valid yet" << std::endl;
-
-			connection_establishment(tmp_buf, connections.at(identifier));
-		}
-		else
-		{
-			connections.at(identifier)->handle_rcv(tmp_buf);
-		}
-
+	    start_receive();
 	}
-    start_receive();
 
 
 }
@@ -327,6 +330,7 @@ void rtp::Socket::udp_send_to(boost::shared_ptr<std::vector<uint8_t>> message,
 void rtp::Socket::close()
 {
 	valid = false;
+	io_service_.stop();
 }
 
 /**

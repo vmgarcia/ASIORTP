@@ -65,48 +65,40 @@ void rtp::Connection::set_valid(bool val)
 
 void rtp::Connection::close_connection()
 {
-	set_valid(false);
 	boost::shared_ptr<data_buffer> message = boost::make_shared<data_buffer>(0);
 	SegmentPtr finseg= boost::make_shared<rtp::Segment>();
-	sequence_no = -2;
-	timeout_count = 0;
+
 	finseg->set_fin(true);
 	finseg->set_header_checksum(create_header_checksum(finseg));
 	PackedMessage<rtp::Segment> packeddata(finseg);
 	packeddata.pack(*message);
-
-	for (int i = 0; (unsigned) i < timer_vec.size(); i++)
-	{
-		timer_vec[i]->cancel();
-	}
+	std::cout << "SENDING FIN" << std::endl;
 	socket_->udp_send_to(message, remote_endpoint_, boost::bind(&rtp::Connection::handle_fin, this,
 		boost::asio::placeholders::error, 
 		boost::asio::placeholders::bytes_transferred));
 
 
 }
-void rtp::Connection::handle_fin()
-{
-	set_valid(false);
-	auto timer = new_timer(socket_->get_io_service(), boost::posix_time::milliseconds(300));
-	timer->async_wait(boost::bind(&rtp::Connection::wait_for_death, this));
+// void rtp::Connection::handle_fin()
+// {
+// 	auto timer = new_timer(socket_->get_io_service(), boost::posix_time::milliseconds(300));
+// 	timer->async_wait(boost::bind(&rtp::Connection::wait_for_death, this));
 
 
-}
+// }
 void rtp::Connection::handle_fin(	const boost::system::error_code& error,
 	std::size_t bytes_transferred)
 {
-	auto timer = new_timer(socket_->get_io_service(), boost::posix_time::milliseconds(300));
-	timer->async_wait(boost::bind(&rtp::Connection::wait_for_death, this));
-
-
+	set_valid(false);
+	sequence_no = -2;
+	timeout_count = 0;
+	congestion_window =1;
+	rcv_window = boost::make_shared<data_buffer>(0);
+	valid_rcv_handler = false;
+	valid_send_handler = false;
+	valid_send_handler = false;
 }
 
-void rtp::Connection::wait_for_death()
-{
-	socket_->delete_connection(remote_endpoint_);
-
-}
 
 void rtp::Connection::async_send(boost::shared_ptr<data_buffer> data_buff, boost::function<void()> send_handler)
 {
@@ -155,13 +147,16 @@ void rtp::Connection::handle_send(boost::shared_ptr<data_buffer> message, int ne
 	std::size_t bytes_transferred)
 
 {
-	auto timer = new_timer(socket_->get_io_service(), boost::posix_time::milliseconds(200));
-	timer->async_wait(boost::bind(&rtp::Connection::handle_send_timeout, this,
-		message,
-		next_seq_no,
-		timer,
-		error,
-		bytes_transferred));
+	if (!error)
+	{
+		auto timer = new_timer(socket_->get_io_service(), boost::posix_time::milliseconds(200));
+		timer->async_wait(boost::bind(&rtp::Connection::handle_send_timeout, this,
+			message,
+			next_seq_no,
+			timer,
+			error,
+			bytes_transferred));
+	}
 
 }
 
@@ -171,14 +166,21 @@ void rtp::Connection::handle_send(boost::shared_ptr<data_buffer> message,
 	const boost::system::error_code& error,
 	std::size_t bytes_transferred)
 {
-	timer->expires_at(timer->expires_at() + boost::posix_time::milliseconds(200));
+	if (!error)
+	{
+		timer->expires_at(timer->expires_at() + boost::posix_time::milliseconds(200));
 
-	timer->async_wait(boost::bind(&rtp::Connection::handle_send_timeout, this,
-		message,
-		next_seq_no,
-		timer,
-		error,
-		bytes_transferred));
+		timer->async_wait(boost::bind(&rtp::Connection::handle_send_timeout, this,
+			message,
+			next_seq_no,
+			timer,
+			error,
+			bytes_transferred));
+	}
+	else
+	{
+		delete_timer(timer);
+	}
 
 }
 void rtp::Connection::handle_send_timeout(boost::shared_ptr<data_buffer> message,
@@ -331,6 +333,7 @@ void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
 		{
 			if (rcvdseg->ack())
 			{
+
 				if (DEBUG) std::cout << "RECEIVED ACK FOR: " << rcvdseg->sequence_no() <<std::endl;
 				if (rcvdseg->sequence_no() >= sequence_no)
 				{
@@ -339,6 +342,13 @@ void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
 				congestion_window += 1;
 				send();
 				reset_timeout();
+			
+			}
+			else if (rcvdseg->fin())
+			{
+				std::cout << "GOT FIN, CLOSING" << std::endl;
+				close_connection();
+				break;
 			}
 			else if (rcvdseg->sequence_no() == sequence_no)
 			{
@@ -363,10 +373,7 @@ void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
 				}
 				reset_timeout();
 			}
-			// else if (rcvdseg->fin())
-			// {
-			// 	handle_fin();
-			// }
+
 			else
 			{
 				break;
@@ -419,13 +426,13 @@ void rtp::Connection::handle_ack(boost::shared_ptr<data_buffer> message,
 		const boost::system::error_code& error, 
 		std::size_t bytes_transferred)
 {
-	auto timer = new_timer(socket_->get_io_service(), boost::posix_time::milliseconds(200));
-	timer->async_wait(boost::bind(&rtp::Connection::handle_ack_timeout, this,
-		message,
-		next_seq_no,
-		timer,
-		error,
-		bytes_transferred));
+		auto timer = new_timer(socket_->get_io_service(), boost::posix_time::milliseconds(200));
+		timer->async_wait(boost::bind(&rtp::Connection::handle_ack_timeout, this,
+			message,
+			next_seq_no,
+			timer,
+			error,
+			bytes_transferred));
 
 }
 
@@ -455,7 +462,7 @@ void rtp::Connection::handle_ack_timeout(boost::shared_ptr<data_buffer> message,
 	{
 		if(DEBUG) 
 		{
-			std::cout << "GOT TO HANDLE CONNECTION TIMEOUT" <<std::endl;
+			std::cout << "GOT TO HANDLE ACK TIMEOUT" <<std::endl;
 			std::cout << sequence_no << std::endl;
 			std::cout << next_seq_no << std::endl;
 		}
@@ -534,7 +541,7 @@ void rtp::Connection::inc_timeout()
 	}
 	else
 	{
-		set_valid(false);
+		close_connection();
 	}
 }
 
