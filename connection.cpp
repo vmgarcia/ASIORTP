@@ -97,6 +97,7 @@ void rtp::Connection::handle_fin(	const boost::system::error_code& error,
 	valid_rcv_handler = false;
 	valid_send_handler = false;
 	valid_send_handler = false;
+	remote_window_size = 0;
 }
 
 
@@ -226,6 +227,11 @@ boost::shared_ptr<data_buffer> rtp::Connection::package_message()
 {
 	boost::shared_ptr<data_buffer> complete_msg(boost::make_shared<data_buffer>(0));
 	int write_index(sequence_no);
+	if(false)
+	{
+		std::cout << "CONGESTION WINDOW GOD DAMNIT" << std::endl;
+		std::cout << congestion_window <<std::endl;
+	}
 	for (int i = 0; i < congestion_window; i++)
 	{
 		int amount_to_send = std::min((int)930, (int)write_buff->size() - write_index);
@@ -339,7 +345,7 @@ void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
 				{
 					sequence_no = rcvdseg->sequence_no();
 				}
-				congestion_window += 1;
+				inc_congestion();
 				send();
 				reset_timeout();
 			
@@ -548,4 +554,24 @@ void rtp::Connection::inc_timeout()
 void rtp::Connection::reset_timeout()
 {
 	timeout_count = 0;
+}
+
+void rtp::Connection::inc_congestion()
+{
+	if (false)
+	{
+		std::cout << "REMOTE WINDOW SIZE" <<std::endl;
+		std::cout << remote_window_size <<std::endl;
+		std::cout << congestion_window <<std::endl;
+	}
+	if (congestion_window < remote_window_size/930 && 
+		congestion_window < 50000/930)
+	{
+		congestion_window++;
+	}
+}
+
+void rtp::Connection::set_remote_window_size(int size)
+{
+	remote_window_size = size;
 }

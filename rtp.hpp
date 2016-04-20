@@ -4,8 +4,8 @@
 #define DEBUG true
 #define DEBUG2 false
 #define MAX_DATAGRAM_SIZE 65000
-#define MAX_TIMEOUT_COUNT 5
-#define DEFAULT_WINDOW_SIZE 20000
+#define MAX_TIMEOUT_COUNT 100
+#define DEFAULT_WINDOW_SIZE 1000
 namespace rtp
 {
 
@@ -25,7 +25,7 @@ namespace rtp
 	class Socket :  public boost::enable_shared_from_this<Socket>
 	{
 	public:
-		Socket(boost::asio::io_service& io_service_,std::string source_ip, std::string source_port);
+		Socket(boost::asio::io_service& io_service_,std::string source_ip, std::string source_port, int max_window_size=DEFAULT_WINDOW_SIZE);
 		boost::shared_ptr<Connection> create_connection(std::string ip, std::string port);
 		boost::asio::io_service& get_io_service();
 		void start_receive();
@@ -78,12 +78,13 @@ namespace rtp
 		bool is_server;
 		boost::function<void(boost::shared_ptr<rtp::Connection>)> receiver;
 		bool valid;
+		int max_window_size;
 	};
 
 	class Connection
 	{
 	public:
-		Connection(boost::asio::ip::udp::endpoint remote_endpoint_, boost::shared_ptr<rtp::Socket> socket_, int window_size=20000);
+		Connection(boost::asio::ip::udp::endpoint remote_endpoint_, boost::shared_ptr<rtp::Socket> socket_, int window_size=DEFAULT_WINDOW_SIZE);
 		bool is_valid();
 		void set_valid(bool val);
 
@@ -147,7 +148,7 @@ namespace rtp
 		void inc_timeout();
 		void reset_timeout();
 		void inc_congestion();
-		void dec_congestion();
+		void set_remote_window_size(int size);
 
 
 
@@ -172,6 +173,7 @@ namespace rtp
 		bool valid_send_handler;
 		boost::shared_ptr<data_buffer> pass_back_buffer;
 		int timeout_count;
+		int remote_window_size;
 
 	};
 

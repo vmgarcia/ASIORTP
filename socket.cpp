@@ -21,13 +21,14 @@
 
 using boost::asio::ip::udp;
 // constructor for socket
-rtp::Socket::Socket(boost::asio::io_service& io_service_, std::string source_ip, std::string source_port): 
+rtp::Socket::Socket(boost::asio::io_service& io_service_, std::string source_ip, std::string source_port, int max_window_size): 
 	io_service_(io_service_),
 	socket_(io_service_, udp::endpoint(boost::asio::ip::address::from_string(source_ip), std::stoi(source_port))),
 	source_port(source_port),
 	source_ip(source_ip),
 	is_server(false),
-	valid(true)
+	valid(true),
+	max_window_size(max_window_size)
 {
 	// accept incoming rtp segments
 	if(DEBUG)std::cout << rtp::get_endpoint_str(socket_.local_endpoint()) << std::endl; 
@@ -70,7 +71,8 @@ void rtp::Socket::multiplex(boost::shared_ptr<data_buffer> tmp_buf,
 		{
 			if (connections.count(identifier) == 0 )  // connection not in list of connections
 			{
-				boost::shared_ptr<Connection> connection = boost::make_shared<Connection>(remote_endpoint_, shared_from_this());
+				boost::shared_ptr<Connection> connection = boost::make_shared<Connection>(remote_endpoint_, shared_from_this(),
+					max_window_size);
 				connections.insert({rtp::get_endpoint_str(remote_endpoint_), connection});
 				// std::cout << rtp::get_endpoint_str(remote_endpoint_) << std::endl;
 				connection_establishment(tmp_buf, connections.at(identifier));
@@ -101,7 +103,7 @@ boost::shared_ptr<rtp::Connection> rtp::Socket::create_connection(std::string ip
 	udp::resolver::query query_(ip, port);
 	udp::endpoint remote_endpoint_ = *resolver_.resolve(query_);
 	boost::shared_ptr<Connection> connection = boost::make_shared<Connection>(remote_endpoint_,
-		shared_from_this());
+		shared_from_this(), max_window_size);
 
 	connections.insert({rtp::get_endpoint_str(remote_endpoint_), connection});
 
@@ -111,6 +113,7 @@ boost::shared_ptr<rtp::Connection> rtp::Socket::create_connection(std::string ip
 	synseg->set_syn(true);
 	// std::cout<<synseg->ack()<<std::endl;
 	synseg->set_sequence_no(connection->get_sequence_no());
+	synseg->set_receive_window(max_window_size);
 	synseg->set_header_checksum(create_header_checksum(synseg));
 	PackedMessage<rtp::Segment> initialack(synseg);
 	initialack.pack(*message);
@@ -168,6 +171,8 @@ void rtp::Socket::connection_establishment(boost::shared_ptr<data_buffer> m_read
 	    	synackseg->set_ack(true);
 	    	synackseg->set_syn(true);
 	    	connection->set_sequence_no(rcvdseg->sequence_no() + 1);
+	    	connection->set_remote_window_size(rcvdseg->receive_window());
+	    	synackseg->set_receive_window(max_window_size);
 	    	synackseg->set_sequence_no(connection->get_sequence_no());
 
 	    	synackseg->set_header_checksum(create_header_checksum(synackseg));
@@ -194,6 +199,8 @@ void rtp::Socket::connection_establishment(boost::shared_ptr<data_buffer> m_read
 	    	ackseg->set_ack(true);
 
 	    	connection->set_sequence_no(rcvdseg->sequence_no() + 1);
+	    	connection->set_remote_window_size(rcvdseg->receive_window());
+
 	    	ackseg->set_sequence_no(connection->get_sequence_no());
 
 		    ackseg->set_header_checksum(create_header_checksum(ackseg));

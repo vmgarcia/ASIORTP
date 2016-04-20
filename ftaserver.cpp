@@ -30,13 +30,21 @@ void save_data(boost::shared_ptr<rtp::Connection> conn, boost::shared_ptr<data_b
 	{
 		writer.open("copy.jpg", std::ios::out);
 	}
+
+	// std::ifstream reader;
+	// reader.open("copy.jpg");
+	// reader.seekg(0, std::ios::end);
+ //    int readerSize = reader.tellg();
+ //    std::cout << readerSize <<std::endl;
+	
 	for (unsigned i =0; i < data->size(); i++)
 	{
 		writer << (*data)[i];
 	}
 	writer.close();
-	if (size < 278153)
+	if (size < 23500215)
 	{
+		//std::cout << size <<std::endl;
 		unsigned data_size = data->size();
 		data = boost::make_shared<data_buffer>(0);
 		conn->async_rcv(data, boost::bind(&save_data,conn, data,  size+data_size));
@@ -44,6 +52,10 @@ void save_data(boost::shared_ptr<rtp::Connection> conn, boost::shared_ptr<data_b
 
 }
 
+void send_data(boost::shared_ptr<rtp::Connection> conn, boost::shared_ptr<data_buffer> data)
+{
+
+}
 
 void fta_rcv_handler(boost::shared_ptr<rtp::Connection> conn)
 {
@@ -53,13 +65,26 @@ void fta_rcv_handler(boost::shared_ptr<rtp::Connection> conn)
 
 }
 int main(int argc, char* argv[])
+
 {
-
 	boost::asio::io_service io_service_;
-
 	boost::shared_ptr<rtp::Socket> socket;
-	socket.reset(new rtp::Socket(io_service_, u8"127.0.0.1", u8"4545"));
-	socket->create_receiver(&fta_rcv_handler);
+
+	if (argc == 3)
+	{
+		std::string port = std::string(argv[1]);
+		int max_window_size = std::stoi(std::string(argv[2]));
+		socket.reset(new rtp::Socket(io_service_, u8"127.0.0.1", port, max_window_size));
+		socket->create_receiver(&fta_rcv_handler);
+
+	}
+	else if (argc == 1)
+	{
+		socket.reset(new rtp::Socket(io_service_, u8"127.0.0.1", u8"4545"));
+		socket->create_receiver(&fta_rcv_handler);
+
+	}
+
 	io_service_.run();
 
 

@@ -19,10 +19,10 @@ rtp:
 
 
 ftaclient:
-	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) ftaclient.cpp socket.cpp connection.cpp segment.pb.cc -o ftaclient -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
+	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) ftaclient.cpp socket.cpp connection.cpp segment.pb.cc -o fta-client -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
 
 ftaserver:
-	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) ftaserver.cpp socket.cpp connection.cpp segment.pb.cc -o ftaserver -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
+	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) ftaserver.cpp socket.cpp connection.cpp segment.pb.cc -o fta-server -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
 
 rem:
 	/opt/rh/devtoolset-2/root/usr/bin/g++ \
