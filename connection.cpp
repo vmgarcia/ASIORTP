@@ -156,7 +156,7 @@ void rtp::Connection::send()
 		boost::shared_ptr<data_buffer> message(package_message());
 		if (message->size() > 0)
 		{
-			std::cout<<"SENDING PART OF IT" <<std::endl;
+			if(DEBUG) std::cout<<"SENDING PART OF IT" <<std::endl;
 			socket_->udp_send_to(message, remote_endpoint_, boost::bind(&rtp::Connection::handle_send, this, message,
 				send_sequence_no,
 				boost::asio::placeholders::error, 
