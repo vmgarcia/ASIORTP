@@ -89,6 +89,9 @@ void rtp::Connection::close_connection()
 void rtp::Connection::handle_fin(	const boost::system::error_code& error,
 	std::size_t bytes_transferred)
 {
+
+	if (send_handler) send_handler(true);
+	if (rcv_handler) rcv_handler(true);
 	set_valid(false);
 	sequence_no = -2;
 	timeout_count = 0;
@@ -101,7 +104,7 @@ void rtp::Connection::handle_fin(	const boost::system::error_code& error,
 }
 
 
-void rtp::Connection::async_send(boost::shared_ptr<data_buffer> data_buff, boost::function<void()> send_handler)
+void rtp::Connection::async_send(boost::shared_ptr<data_buffer> data_buff, boost::function<void(bool)> send_handler)
 {
 	set_send_handler(data_buff, send_handler);
 	send();
@@ -109,7 +112,7 @@ void rtp::Connection::async_send(boost::shared_ptr<data_buffer> data_buff, boost
 
 }
 
-void rtp::Connection::set_send_handler(boost::shared_ptr<data_buffer> write_buff_, boost::function<void()> send_handler)
+void rtp::Connection::set_send_handler(boost::shared_ptr<data_buffer> write_buff_, boost::function<void(bool)> send_handler)
 {
 	this->send_handler = send_handler;
 	write_buff = write_buff_;
@@ -137,7 +140,7 @@ void rtp::Connection::call_send_handler()
 	if ((unsigned) sequence_no >= write_buff->size() )
 	{
 		valid_send_handler = false;
-		send_handler();
+		send_handler(false);
 
 	}
 
@@ -191,8 +194,10 @@ void rtp::Connection::handle_send_timeout(boost::shared_ptr<data_buffer> message
 			std::size_t bytes_transferred)
 {
 
-	if(DEBUG) std::cout << "GOT TO HANDLE CONNECTION TIMEOUT" <<std::endl;
-	if (sequence_no < next_seq_no && !error && is_valid())
+	if(DEBUG) std::cout << "GOT TO HANDLE SEND TIMEOUT" <<std::endl;
+	std::cout << sequence_no << "<- SEQUENCE NO\n";
+	std::cout << next_seq_no << "<- NEXT SEQ NO" << std::endl;
+	if (sequence_no < next_seq_no && !error)
 	{
 
 		if (DEBUG) 
@@ -271,7 +276,7 @@ boost::shared_ptr<data_buffer> rtp::Connection::package_message()
 }
 
 
-void rtp::Connection::async_rcv(boost::shared_ptr<data_buffer> data_buff, boost::function<void()> rcv_handler)
+void rtp::Connection::async_rcv(boost::shared_ptr<data_buffer> data_buff, boost::function<void(bool)> rcv_handler)
 {
 	set_rcv_handler(data_buff, rcv_handler);
 	if (rcv_window->size() > 0)
@@ -285,7 +290,7 @@ void rtp::Connection::async_rcv(boost::shared_ptr<data_buffer> data_buff, boost:
 
 
 
-void rtp::Connection::set_rcv_handler(boost::shared_ptr<data_buffer> pass_back_buffer_, boost::function<void()> rcv_handler)
+void rtp::Connection::set_rcv_handler(boost::shared_ptr<data_buffer> pass_back_buffer_, boost::function<void(bool)> rcv_handler)
 {
 	this->rcv_handler = rcv_handler;
 	pass_back_buffer = pass_back_buffer_;
@@ -317,7 +322,7 @@ void rtp::Connection::call_rcv_handler()
 		rcv_window = boost::make_shared<data_buffer>(0);
 		valid_rcv_handler = false;
 
-		rcv_handler();
+		rcv_handler(false);
 	}
 }
 
@@ -361,13 +366,12 @@ void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
 
 				is_data = true;
 	 
-				std::string data_s(rcvdseg->data());
 				//if ((int)(rcv_window->size() + data_s.size())  < window_size)
 				{
-					rcv_window->insert(rcv_window->end(), data_s.begin(), data_s.end());
+					rcv_window->insert(rcv_window->end(), rcvdseg->data().begin(), rcvdseg->data().end());
 
 					// rcv_window->insert(rcv_window->end(), m_readbuf->begin(), m_readbuf->end());
-					sequence_no += (int)data_s.size();
+					sequence_no += (int)rcvdseg->data().size();
 					if(DEBUG)
 					{
 						std::cout << "SEQUENCE NO OF THIS DATA" << "\n";

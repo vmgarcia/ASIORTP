@@ -4,7 +4,7 @@
 #define DEBUG true
 #define DEBUG2 false
 #define MAX_DATAGRAM_SIZE 65000
-#define MAX_TIMEOUT_COUNT 100
+#define MAX_TIMEOUT_COUNT 20
 #define DEFAULT_WINDOW_SIZE 1000
 namespace rtp
 {
@@ -131,12 +131,12 @@ namespace rtp
 			boost::posix_time::milliseconds milliseconds);
 		void delete_timer(boost::shared_ptr<boost::asio::deadline_timer> timer);
 		void async_receive(boost::function<void()> accept_handler);
-		void async_send(boost::shared_ptr<data_buffer> data_buff, boost::function<void()> send_handler);
-		void async_rcv(boost::shared_ptr<data_buffer> data_buff, boost::function<void()> rcv_handler);
+		void async_send(boost::shared_ptr<data_buffer> data_buff, boost::function<void(bool)> send_handler);
+		void async_rcv(boost::shared_ptr<data_buffer> data_buff, boost::function<void(bool)> rcv_handler);
 		void handle_rcv(boost::shared_ptr<data_buffer> message);
-		void set_rcv_handler(boost::shared_ptr<data_buffer> data_buff, boost::function<void()> rcv_handler);
+		void set_rcv_handler(boost::shared_ptr<data_buffer> data_buff, boost::function<void(bool)> rcv_handler);
 		void call_rcv_handler();
-		void set_send_handler(boost::shared_ptr<data_buffer> data_buff, boost::function<void()> send_handler);
+		void set_send_handler(boost::shared_ptr<data_buffer> data_buff, boost::function<void(bool)> send_handler);
 		void call_send_handler();
 		boost::shared_ptr<data_buffer> package_message();
 		void send();
@@ -166,10 +166,10 @@ namespace rtp
 		int congestion_window;
 		int window_size;
 		boost::shared_ptr<data_buffer> rcv_window;
-		boost::function<void()> rcv_handler;
+		boost::function<void(bool)> rcv_handler;
 		bool valid_rcv_handler;
 		boost::shared_ptr<data_buffer> write_buff;
-		boost::function<void()> send_handler;
+		boost::function<void(bool)> send_handler;
 		bool valid_send_handler;
 		boost::shared_ptr<data_buffer> pass_back_buffer;
 		int timeout_count;

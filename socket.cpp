@@ -7,7 +7,6 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/make_shared.hpp>
-#include <boost/asio/steady_timer.hpp>
 #include <boost/crc.hpp>
 
 //#include <boost/system.hpp>
@@ -227,7 +226,7 @@ void rtp::Socket::connection_establishment(boost::shared_ptr<data_buffer> m_read
 		    connection->send();
 
 	    }
-	    else if (rcvdseg->ack() && rcvdseg->sequence_no() == 0)
+	    else if (rcvdseg->ack() && rcvdseg->sequence_no() == 0) 
 	    {
 	    	connection->set_sequence_no(rcvdseg->sequence_no());
 	    	if(DEBUG) std::cout << "received ack" <<std::endl;
@@ -238,6 +237,18 @@ void rtp::Socket::connection_establishment(boost::shared_ptr<data_buffer> m_read
 	    	}
 	    	connection->send();
 	    }
+	    else if (rcvdseg->data().size() >(unsigned)0 && rcvdseg->sequence_no()==0)
+	    {
+	    	connection->set_sequence_no(rcvdseg->sequence_no());
+	    	if(DEBUG) std::cout << "received data ack" <<std::endl;
+	    	connection->set_valid(true);
+	    	if (is_server)
+	    	{
+	    		receiver(connection);
+	    	}
+	    	connection->handle_rcv(m_readbuf);	    	
+	    }
+
 	}
     
 }
@@ -429,5 +440,4 @@ bool rtp::check_data_checksum(SegmentPtr segment)
 	}
 	return true;
 }
-
 

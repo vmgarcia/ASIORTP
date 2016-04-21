@@ -19,13 +19,20 @@ rtp:
 
 
 ftaclient:
-	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) ftaclient.cpp socket.cpp connection.cpp segment.pb.cc -o fta-client -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
+	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) ftaclient.cpp socket.cpp connection.cpp segment.pb.cc fta_request.pb.cc \
+		-o fta-client -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
 
 ftaserver:
-	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) ftaserver.cpp socket.cpp connection.cpp segment.pb.cc -o fta-server -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
+	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) ftaserver.cpp socket.cpp connection.cpp segment.pb.cc fta_request.pb.cc \
+		-o fta-server -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
 
 rem:
-	/opt/rh/devtoolset-2/root/usr/bin/g++ \
-	 -pthread -I/nethome/vgarcia7/proto/include $(DEBUG) -I/nethome/vgarcia7/boost_1_60_0 \
-	 test1.cpp socket.cpp connection.cpp segment.pb.cc -o rtp -L/nethome/vgarcia7/boost_1_60_0/stage/lib \
-	 $(LIBS) -Wl,-rpath,/nethome/vgarcia7/boost_1_60_0/stage/lib -Wl,-rpath -Wl,/nethome/vgarcia7/proto/lib -lprotobuf -lpthread2> error.txt
+	/opt/rh/devtoolset-2/root/usr/bin/g++  $(CXXFLAGS) $(DEBUG) \
+	  test1.cpp socket.cpp connection.cpp segment.pb.cc -o rtp $(LIBS) $(LINKFLAGS) 2> error.txt
+c:
+	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) ftac.cpp socket.cpp connection.cpp segment.pb.cc fta_request.pb.cc \
+		-o c -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
+
+s: 
+	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) s.cpp socket.cpp connection.cpp segment.pb.cc fta_request.pb.cc \
+		-o s -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
