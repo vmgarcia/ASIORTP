@@ -619,5 +619,6 @@ void rtp::Connection::inc_congestion()
 
 void rtp::Connection::set_remote_window_size(int size)
 {
+	
 	remote_window_size = size;
 }
