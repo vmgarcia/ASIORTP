@@ -237,7 +237,7 @@ void rtp::Socket::connection_establishment(boost::shared_ptr<data_buffer> m_read
 	    	}
 	    	connection->send();
 	    }
-	    else if (rcvdseg->data().size() >(unsigned)0 && rcvdseg->sequence_no()==0)
+	    else if (rcvdseg->data().size() >(unsigned)0 && rcvdseg->sequence_no()==0 &&connection->get_sequence_no()==-1)
 	    {
 	    	connection->set_sequence_no(rcvdseg->sequence_no());
 	    	if(DEBUG) std::cout << "received data ack" <<std::endl;

@@ -174,6 +174,8 @@ namespace rtp
 		boost::shared_ptr<data_buffer> pass_back_buffer;
 		int timeout_count;
 		int remote_window_size;
+		int old_sequence_no;
+		int write_index;
 
 	};
 
