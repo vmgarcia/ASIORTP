@@ -1,14 +1,12 @@
 package rtp;
 
 message Segment {
-	optional string source_port = 1;
-	optional string dest_port = 2;
-	optional int32 sequence_no = 3;
-	optional bool ack = 4;
-	optional bool syn = 5;
-	optional bool fin = 6;
-	optional int32 receive_window = 7;
-	optional bytes data = 8;
-	optional uint32 data_checksum = 9;
-	optional uint32 header_checksum = 10;
+	optional int32 sequence_no = 1;
+	optional bool ack = 2;
+	optional bool syn = 3;
+	optional bool fin = 4;
+	optional int32 receive_window = 5;
+	optional bytes data = 6;
+	optional uint32 data_checksum = 7;
+	optional uint32 header_checksum = 8;
 }

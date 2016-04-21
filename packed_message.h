@@ -99,6 +99,8 @@ public:
     //
     bool unpack(const data_buffer& buf, unsigned size, int offset)
     {
+        std::cout<<"UNPACK SIZE "<<size<<std::endl;
+        std::cout<<"UNPACK OFFSET " <<offset<<std::endl;
         return m_msg->ParseFromArray(&buf[offset + HEADER_SIZE], size);
     }
 private:

@@ -90,69 +90,45 @@ class Segment : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // optional string source_port = 1;
-  inline bool has_source_port() const;
-  inline void clear_source_port();
-  static const int kSourcePortFieldNumber = 1;
-  inline const ::std::string& source_port() const;
-  inline void set_source_port(const ::std::string& value);
-  inline void set_source_port(const char* value);
-  inline void set_source_port(const char* value, size_t size);
-  inline ::std::string* mutable_source_port();
-  inline ::std::string* release_source_port();
-  inline void set_allocated_source_port(::std::string* source_port);
-
-  // optional string dest_port = 2;
-  inline bool has_dest_port() const;
-  inline void clear_dest_port();
-  static const int kDestPortFieldNumber = 2;
-  inline const ::std::string& dest_port() const;
-  inline void set_dest_port(const ::std::string& value);
-  inline void set_dest_port(const char* value);
-  inline void set_dest_port(const char* value, size_t size);
-  inline ::std::string* mutable_dest_port();
-  inline ::std::string* release_dest_port();
-  inline void set_allocated_dest_port(::std::string* dest_port);
-
-  // optional int32 sequence_no = 3;
+  // optional int32 sequence_no = 1;
   inline bool has_sequence_no() const;
   inline void clear_sequence_no();
-  static const int kSequenceNoFieldNumber = 3;
+  static const int kSequenceNoFieldNumber = 1;
   inline ::google::protobuf::int32 sequence_no() const;
   inline void set_sequence_no(::google::protobuf::int32 value);
 
-  // optional bool ack = 4;
+  // optional bool ack = 2;
   inline bool has_ack() const;
   inline void clear_ack();
-  static const int kAckFieldNumber = 4;
+  static const int kAckFieldNumber = 2;
   inline bool ack() const;
   inline void set_ack(bool value);
 
-  // optional bool syn = 5;
+  // optional bool syn = 3;
   inline bool has_syn() const;
   inline void clear_syn();
-  static const int kSynFieldNumber = 5;
+  static const int kSynFieldNumber = 3;
   inline bool syn() const;
   inline void set_syn(bool value);
 
-  // optional bool fin = 6;
+  // optional bool fin = 4;
   inline bool has_fin() const;
   inline void clear_fin();
-  static const int kFinFieldNumber = 6;
+  static const int kFinFieldNumber = 4;
   inline bool fin() const;
   inline void set_fin(bool value);
 
-  // optional int32 receive_window = 7;
+  // optional int32 receive_window = 5;
   inline bool has_receive_window() const;
   inline void clear_receive_window();
-  static const int kReceiveWindowFieldNumber = 7;
+  static const int kReceiveWindowFieldNumber = 5;
   inline ::google::protobuf::int32 receive_window() const;
   inline void set_receive_window(::google::protobuf::int32 value);
 
-  // optional bytes data = 8;
+  // optional bytes data = 6;
   inline bool has_data() const;
   inline void clear_data();
-  static const int kDataFieldNumber = 8;
+  static const int kDataFieldNumber = 6;
   inline const ::std::string& data() const;
   inline void set_data(const ::std::string& value);
   inline void set_data(const char* value);
@@ -161,26 +137,22 @@ class Segment : public ::google::protobuf::Message {
   inline ::std::string* release_data();
   inline void set_allocated_data(::std::string* data);
 
-  // optional uint32 data_checksum = 9;
+  // optional uint32 data_checksum = 7;
   inline bool has_data_checksum() const;
   inline void clear_data_checksum();
-  static const int kDataChecksumFieldNumber = 9;
+  static const int kDataChecksumFieldNumber = 7;
   inline ::google::protobuf::uint32 data_checksum() const;
   inline void set_data_checksum(::google::protobuf::uint32 value);
 
-  // optional uint32 header_checksum = 10;
+  // optional uint32 header_checksum = 8;
   inline bool has_header_checksum() const;
   inline void clear_header_checksum();
-  static const int kHeaderChecksumFieldNumber = 10;
+  static const int kHeaderChecksumFieldNumber = 8;
   inline ::google::protobuf::uint32 header_checksum() const;
   inline void set_header_checksum(::google::protobuf::uint32 value);
 
   // @@protoc_insertion_point(class_scope:rtp.Segment)
  private:
-  inline void set_has_source_port();
-  inline void clear_has_source_port();
-  inline void set_has_dest_port();
-  inline void clear_has_dest_port();
   inline void set_has_sequence_no();
   inline void clear_has_sequence_no();
   inline void set_has_ack();
@@ -202,8 +174,6 @@ class Segment : public ::google::protobuf::Message {
 
   ::google::protobuf::uint32 _has_bits_[1];
   mutable int _cached_size_;
-  ::std::string* source_port_;
-  ::std::string* dest_port_;
   ::google::protobuf::int32 sequence_no_;
   bool ack_;
   bool syn_;
@@ -226,167 +196,15 @@ class Segment : public ::google::protobuf::Message {
 
 // Segment
 
-// optional string source_port = 1;
-inline bool Segment::has_source_port() const {
+// optional int32 sequence_no = 1;
+inline bool Segment::has_sequence_no() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void Segment::set_has_source_port() {
+inline void Segment::set_has_sequence_no() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void Segment::clear_has_source_port() {
-  _has_bits_[0] &= ~0x00000001u;
-}
-inline void Segment::clear_source_port() {
-  if (source_port_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    source_port_->clear();
-  }
-  clear_has_source_port();
-}
-inline const ::std::string& Segment::source_port() const {
-  // @@protoc_insertion_point(field_get:rtp.Segment.source_port)
-  return *source_port_;
-}
-inline void Segment::set_source_port(const ::std::string& value) {
-  set_has_source_port();
-  if (source_port_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    source_port_ = new ::std::string;
-  }
-  source_port_->assign(value);
-  // @@protoc_insertion_point(field_set:rtp.Segment.source_port)
-}
-inline void Segment::set_source_port(const char* value) {
-  set_has_source_port();
-  if (source_port_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    source_port_ = new ::std::string;
-  }
-  source_port_->assign(value);
-  // @@protoc_insertion_point(field_set_char:rtp.Segment.source_port)
-}
-inline void Segment::set_source_port(const char* value, size_t size) {
-  set_has_source_port();
-  if (source_port_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    source_port_ = new ::std::string;
-  }
-  source_port_->assign(reinterpret_cast<const char*>(value), size);
-  // @@protoc_insertion_point(field_set_pointer:rtp.Segment.source_port)
-}
-inline ::std::string* Segment::mutable_source_port() {
-  set_has_source_port();
-  if (source_port_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    source_port_ = new ::std::string;
-  }
-  // @@protoc_insertion_point(field_mutable:rtp.Segment.source_port)
-  return source_port_;
-}
-inline ::std::string* Segment::release_source_port() {
-  clear_has_source_port();
-  if (source_port_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    return NULL;
-  } else {
-    ::std::string* temp = source_port_;
-    source_port_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-    return temp;
-  }
-}
-inline void Segment::set_allocated_source_port(::std::string* source_port) {
-  if (source_port_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    delete source_port_;
-  }
-  if (source_port) {
-    set_has_source_port();
-    source_port_ = source_port;
-  } else {
-    clear_has_source_port();
-    source_port_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-  }
-  // @@protoc_insertion_point(field_set_allocated:rtp.Segment.source_port)
-}
-
-// optional string dest_port = 2;
-inline bool Segment::has_dest_port() const {
-  return (_has_bits_[0] & 0x00000002u) != 0;
-}
-inline void Segment::set_has_dest_port() {
-  _has_bits_[0] |= 0x00000002u;
-}
-inline void Segment::clear_has_dest_port() {
-  _has_bits_[0] &= ~0x00000002u;
-}
-inline void Segment::clear_dest_port() {
-  if (dest_port_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    dest_port_->clear();
-  }
-  clear_has_dest_port();
-}
-inline const ::std::string& Segment::dest_port() const {
-  // @@protoc_insertion_point(field_get:rtp.Segment.dest_port)
-  return *dest_port_;
-}
-inline void Segment::set_dest_port(const ::std::string& value) {
-  set_has_dest_port();
-  if (dest_port_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    dest_port_ = new ::std::string;
-  }
-  dest_port_->assign(value);
-  // @@protoc_insertion_point(field_set:rtp.Segment.dest_port)
-}
-inline void Segment::set_dest_port(const char* value) {
-  set_has_dest_port();
-  if (dest_port_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    dest_port_ = new ::std::string;
-  }
-  dest_port_->assign(value);
-  // @@protoc_insertion_point(field_set_char:rtp.Segment.dest_port)
-}
-inline void Segment::set_dest_port(const char* value, size_t size) {
-  set_has_dest_port();
-  if (dest_port_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    dest_port_ = new ::std::string;
-  }
-  dest_port_->assign(reinterpret_cast<const char*>(value), size);
-  // @@protoc_insertion_point(field_set_pointer:rtp.Segment.dest_port)
-}
-inline ::std::string* Segment::mutable_dest_port() {
-  set_has_dest_port();
-  if (dest_port_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    dest_port_ = new ::std::string;
-  }
-  // @@protoc_insertion_point(field_mutable:rtp.Segment.dest_port)
-  return dest_port_;
-}
-inline ::std::string* Segment::release_dest_port() {
-  clear_has_dest_port();
-  if (dest_port_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    return NULL;
-  } else {
-    ::std::string* temp = dest_port_;
-    dest_port_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-    return temp;
-  }
-}
-inline void Segment::set_allocated_dest_port(::std::string* dest_port) {
-  if (dest_port_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    delete dest_port_;
-  }
-  if (dest_port) {
-    set_has_dest_port();
-    dest_port_ = dest_port;
-  } else {
-    clear_has_dest_port();
-    dest_port_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-  }
-  // @@protoc_insertion_point(field_set_allocated:rtp.Segment.dest_port)
-}
-
-// optional int32 sequence_no = 3;
-inline bool Segment::has_sequence_no() const {
-  return (_has_bits_[0] & 0x00000004u) != 0;
-}
-inline void Segment::set_has_sequence_no() {
-  _has_bits_[0] |= 0x00000004u;
-}
 inline void Segment::clear_has_sequence_no() {
-  _has_bits_[0] &= ~0x00000004u;
+  _has_bits_[0] &= ~0x00000001u;
 }
 inline void Segment::clear_sequence_no() {
   sequence_no_ = 0;
@@ -402,15 +220,15 @@ inline void Segment::set_sequence_no(::google::protobuf::int32 value) {
   // @@protoc_insertion_point(field_set:rtp.Segment.sequence_no)
 }
 
-// optional bool ack = 4;
+// optional bool ack = 2;
 inline bool Segment::has_ack() const {
-  return (_has_bits_[0] & 0x00000008u) != 0;
+  return (_has_bits_[0] & 0x00000002u) != 0;
 }
 inline void Segment::set_has_ack() {
-  _has_bits_[0] |= 0x00000008u;
+  _has_bits_[0] |= 0x00000002u;
 }
 inline void Segment::clear_has_ack() {
-  _has_bits_[0] &= ~0x00000008u;
+  _has_bits_[0] &= ~0x00000002u;
 }
 inline void Segment::clear_ack() {
   ack_ = false;
@@ -426,15 +244,15 @@ inline void Segment::set_ack(bool value) {
   // @@protoc_insertion_point(field_set:rtp.Segment.ack)
 }
 
-// optional bool syn = 5;
+// optional bool syn = 3;
 inline bool Segment::has_syn() const {
-  return (_has_bits_[0] & 0x00000010u) != 0;
+  return (_has_bits_[0] & 0x00000004u) != 0;
 }
 inline void Segment::set_has_syn() {
-  _has_bits_[0] |= 0x00000010u;
+  _has_bits_[0] |= 0x00000004u;
 }
 inline void Segment::clear_has_syn() {
-  _has_bits_[0] &= ~0x00000010u;
+  _has_bits_[0] &= ~0x00000004u;
 }
 inline void Segment::clear_syn() {
   syn_ = false;
@@ -450,15 +268,15 @@ inline void Segment::set_syn(bool value) {
   // @@protoc_insertion_point(field_set:rtp.Segment.syn)
 }
 
-// optional bool fin = 6;
+// optional bool fin = 4;
 inline bool Segment::has_fin() const {
-  return (_has_bits_[0] & 0x00000020u) != 0;
+  return (_has_bits_[0] & 0x00000008u) != 0;
 }
 inline void Segment::set_has_fin() {
-  _has_bits_[0] |= 0x00000020u;
+  _has_bits_[0] |= 0x00000008u;
 }
 inline void Segment::clear_has_fin() {
-  _has_bits_[0] &= ~0x00000020u;
+  _has_bits_[0] &= ~0x00000008u;
 }
 inline void Segment::clear_fin() {
   fin_ = false;
@@ -474,15 +292,15 @@ inline void Segment::set_fin(bool value) {
   // @@protoc_insertion_point(field_set:rtp.Segment.fin)
 }
 
-// optional int32 receive_window = 7;
+// optional int32 receive_window = 5;
 inline bool Segment::has_receive_window() const {
-  return (_has_bits_[0] & 0x00000040u) != 0;
+  return (_has_bits_[0] & 0x00000010u) != 0;
 }
 inline void Segment::set_has_receive_window() {
-  _has_bits_[0] |= 0x00000040u;
+  _has_bits_[0] |= 0x00000010u;
 }
 inline void Segment::clear_has_receive_window() {
-  _has_bits_[0] &= ~0x00000040u;
+  _has_bits_[0] &= ~0x00000010u;
 }
 inline void Segment::clear_receive_window() {
   receive_window_ = 0;
@@ -498,15 +316,15 @@ inline void Segment::set_receive_window(::google::protobuf::int32 value) {
   // @@protoc_insertion_point(field_set:rtp.Segment.receive_window)
 }
 
-// optional bytes data = 8;
+// optional bytes data = 6;
 inline bool Segment::has_data() const {
-  return (_has_bits_[0] & 0x00000080u) != 0;
+  return (_has_bits_[0] & 0x00000020u) != 0;
 }
 inline void Segment::set_has_data() {
-  _has_bits_[0] |= 0x00000080u;
+  _has_bits_[0] |= 0x00000020u;
 }
 inline void Segment::clear_has_data() {
-  _has_bits_[0] &= ~0x00000080u;
+  _has_bits_[0] &= ~0x00000020u;
 }
 inline void Segment::clear_data() {
   if (data_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
@@ -574,15 +392,15 @@ inline void Segment::set_allocated_data(::std::string* data) {
   // @@protoc_insertion_point(field_set_allocated:rtp.Segment.data)
 }
 
-// optional uint32 data_checksum = 9;
+// optional uint32 data_checksum = 7;
 inline bool Segment::has_data_checksum() const {
-  return (_has_bits_[0] & 0x00000100u) != 0;
+  return (_has_bits_[0] & 0x00000040u) != 0;
 }
 inline void Segment::set_has_data_checksum() {
-  _has_bits_[0] |= 0x00000100u;
+  _has_bits_[0] |= 0x00000040u;
 }
 inline void Segment::clear_has_data_checksum() {
-  _has_bits_[0] &= ~0x00000100u;
+  _has_bits_[0] &= ~0x00000040u;
 }
 inline void Segment::clear_data_checksum() {
   data_checksum_ = 0u;
@@ -598,15 +416,15 @@ inline void Segment::set_data_checksum(::google::protobuf::uint32 value) {
   // @@protoc_insertion_point(field_set:rtp.Segment.data_checksum)
 }
 
-// optional uint32 header_checksum = 10;
+// optional uint32 header_checksum = 8;
 inline bool Segment::has_header_checksum() const {
-  return (_has_bits_[0] & 0x00000200u) != 0;
+  return (_has_bits_[0] & 0x00000080u) != 0;
 }
 inline void Segment::set_has_header_checksum() {
-  _has_bits_[0] |= 0x00000200u;
+  _has_bits_[0] |= 0x00000080u;
 }
 inline void Segment::clear_has_header_checksum() {
-  _has_bits_[0] &= ~0x00000200u;
+  _has_bits_[0] &= ~0x00000080u;
 }
 inline void Segment::clear_header_checksum() {
   header_checksum_ = 0u;

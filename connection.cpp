@@ -287,8 +287,8 @@ boost::shared_ptr<data_buffer> rtp::Connection::package_message()
 			dataseg->set_data(data);
 			if (DEBUG)
 			{
-				std::cout<< "PACKING THIS DATA \n";
-				std::cout <<dataseg->data()<<std::endl;
+				// std::cout<< "PACKING THIS DATA \n";
+				// std::cout <<dataseg->data()<<std::endl;
 				std::cout << "SEQUENCE NO OF THIS DATA\n";
 				std::cout << dataseg->sequence_no() <<std::endl;
 			}
@@ -373,8 +373,19 @@ void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
 		//std::cout << show_hex(*m_readbuf) <<std::endl;
 
 	    int msg_len = m_packed_segment.decode_header(*m_readbuf, buffer_position);
-
-	    m_packed_segment.unpack(*m_readbuf, msg_len, buffer_position);
+	    if (msg_len <= (int)m_readbuf->size() - buffer_position && msg_len<=1000 && buffer_position<=50000
+	    	&& msg_len >= 0 && buffer_position >=0){
+	    	if(DEBUG)
+	    	{
+	    		std::cout<<"buffer_position: " <<buffer_position<<std::endl;
+	    		std::cout <<"MESSAGE LENGTH: " <<msg_len<<std::endl;
+	    	}
+		    m_packed_segment.unpack(*m_readbuf, msg_len, buffer_position);
+	    }
+	    else
+	    {
+	    	break;
+	    }
 		SegmentPtr rcvdseg = m_packed_segment.get_msg();
 
 		if (check_header_checksum(rcvdseg) && check_data_checksum(rcvdseg))
@@ -613,7 +624,7 @@ void rtp::Connection::inc_congestion()
 		std::cout << congestion_window <<std::endl;
 	}
 	if (congestion_window < remote_window_size/930 && 
-		congestion_window < 50000/930)
+		congestion_window < 40000/930)
 	{
 		congestion_window++;
 	}

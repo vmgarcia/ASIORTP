@@ -144,7 +144,16 @@ void rtp::Socket::connection_establishment(boost::shared_ptr<data_buffer> m_read
     int msg_len = m_packed_segment.decode_header(*m_readbuf, buffer_position);
     //buffer_position += HEADER_SIZE;
 
-    m_packed_segment.unpack(*m_readbuf, msg_len, buffer_position);
+    if (msg_len <= (int)m_readbuf->size() - buffer_position){
+	    m_packed_segment.unpack(*m_readbuf, msg_len, buffer_position);
+    }
+    else
+    {
+	    m_packed_segment.unpack(*m_readbuf, 930, buffer_position);
+
+    }
+
+    // m_packed_segment.unpack(*m_readbuf, msg_len, buffer_position);
     //buffer_position += msg_len;
 
     SegmentPtr rcvdseg = m_packed_segment.get_msg();
@@ -366,9 +375,15 @@ boost::uint32_t rtp::create_checksum(uint8_t* bytes)
 {
 	std::size_t size = sizeof(bytes);
 	boost::crc_32_type result;
-
-	result.process_bytes(bytes, size);
-	return (boost::uint32_t) result.checksum();
+	if(size>0)
+	{
+		result.process_bytes(bytes, size);
+		return (boost::uint32_t) result.checksum();
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 boost::uint32_t rtp::create_header_checksum(SegmentPtr segment)
@@ -382,7 +397,7 @@ boost::uint32_t rtp::create_header_checksum(SegmentPtr segment)
 		bool fin;
 		int receive_window;
 	};
-	header_struct header;
+	header_struct header={};
 	// header.source_port = segment->source_port();
 	// header.dest_port = segment->dest_port();
 	header.sequence_no = segment->sequence_no();
@@ -419,7 +434,11 @@ boost::uint32_t rtp::create_data_checksum(SegmentPtr segment)
 {
 	std::vector<uint8_t> data(segment->data().begin(), segment->data().end());
 	uint8_t* data_bytes = &data[0];
-	boost::uint32_t checksum = create_checksum(data_bytes);
+	boost::uint32_t checksum = 0;
+	if(data_bytes)
+	{
+		checksum = create_checksum(data_bytes);
+	}
 	return checksum;
 }
 
