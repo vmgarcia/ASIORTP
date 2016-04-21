@@ -176,6 +176,7 @@ namespace rtp
 		int remote_window_size;
 		int old_sequence_no;
 		int write_index;
+		int send_sequence_no;
 
 	};
 

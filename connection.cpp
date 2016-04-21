@@ -38,7 +38,8 @@ rtp::Connection::Connection(udp::endpoint remote_endpoint_, boost::shared_ptr<rt
 	valid_send_handler(false),
 	timeout_count(0),
 	old_sequence_no(0),
-	write_index(0)
+	write_index(0),
+	send_sequence_no(0)
 {
 }
 
@@ -67,7 +68,7 @@ void rtp::Connection::set_valid(bool val)
 	{
 		write_index = 0;
 
-		old_sequence_no = sequence_no;
+		old_sequence_no = send_sequence_no;
 		if(DEBUG)
 		{
 			std::cout<<"UPDATING SEQUENCE NO: " << old_sequence_no<<std::endl;
@@ -114,6 +115,7 @@ void rtp::Connection::handle_fin(	const boost::system::error_code& error,
 	remote_window_size = 0;
 	old_sequence_no=0;
 	write_index=0;
+	send_sequence_no=0;
 }
 
 
@@ -135,7 +137,7 @@ void rtp::Connection::set_send_handler(boost::shared_ptr<data_buffer> write_buff
 
 		write_index = 0;
 
-		old_sequence_no = sequence_no;
+		old_sequence_no = send_sequence_no;
 		if(DEBUG)
 		{
 			std::cout<<"UPDATING SEQUENCE NO: " << old_sequence_no<<std::endl;
@@ -156,7 +158,7 @@ void rtp::Connection::send()
 		{
 			std::cout<<"SENDING PART OF IT" <<std::endl;
 			socket_->udp_send_to(message, remote_endpoint_, boost::bind(&rtp::Connection::handle_send, this, message,
-				sequence_no,
+				send_sequence_no,
 				boost::asio::placeholders::error, 
 				boost::asio::placeholders::bytes_transferred));
 		}
@@ -166,11 +168,11 @@ void rtp::Connection::send()
 }
 void rtp::Connection::call_send_handler()
 {
-	if ((unsigned) sequence_no >= write_buff->size() + old_sequence_no && valid_send_handler )
+	if ((unsigned) send_sequence_no >= write_buff->size() + old_sequence_no && valid_send_handler )
 	{
 		valid_send_handler = false;
 		send_handler(false);
-		old_sequence_no=sequence_no;
+		old_sequence_no=send_sequence_no;
 
 	}
 
@@ -227,16 +229,16 @@ void rtp::Connection::handle_send_timeout(boost::shared_ptr<data_buffer> message
 	if(DEBUG) 
 	{
 		std::cout << "GOT TO HANDLE SEND TIMEOUT" <<std::endl;
-		std::cout << sequence_no << "<- SEQUENCE NO\n";
+		std::cout << send_sequence_no << "<- SEQUENCE NO\n";
 		std::cout << next_seq_no << "<- NEXT SEQ NO" << std::endl;
 	}
-	if (sequence_no <= next_seq_no && !error)
+	if (send_sequence_no <= next_seq_no && !error && is_valid())
 	{
 
 		if (DEBUG) 
 		{
 			std::cout << "Timeout occurred at sequence_no " << next_seq_no << std::endl;
-			std::cout << "Resending packets from " << sequence_no << std::endl;
+			std::cout << "Resending packets from " << send_sequence_no << std::endl;
 		}
 		congestion_window = congestion_window /2;
 		boost::shared_ptr<data_buffer> message(package_message());
@@ -328,8 +330,8 @@ void rtp::Connection::set_rcv_handler(boost::shared_ptr<data_buffer> pass_back_b
 	this->rcv_handler = rcv_handler;
 	pass_back_buffer = pass_back_buffer_;
 	valid_rcv_handler = true;
-	write_index=0;
-	old_sequence_no=sequence_no;
+	// write_index=0;
+	// old_sequence_no=send_sequence_no;
 
 }
 
@@ -381,14 +383,14 @@ void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
 			{
 
 				if (DEBUG) std::cout << "RECEIVED ACK FOR: " << rcvdseg->sequence_no() <<std::endl;
-				if (rcvdseg->sequence_no() >= sequence_no)
+				if (rcvdseg->sequence_no() >= send_sequence_no)
 				{
-					sequence_no = rcvdseg->sequence_no();
-					write_index = sequence_no -old_sequence_no;
+					send_sequence_no = rcvdseg->sequence_no();
+					write_index = send_sequence_no -old_sequence_no;
 					if(DEBUG)
 					{
 						std::cout << "NEW WRITE INDEX: " << write_index <<std::endl;
-						std::cout << "OLD SEQUENCE NO: " << write_index <<std::endl;
+						std::cout << "OLD SEQUENCE NO: " << old_sequence_no <<std::endl;
 
 					}
 				}
@@ -619,6 +621,6 @@ void rtp::Connection::inc_congestion()
 
 void rtp::Connection::set_remote_window_size(int size)
 {
-	
+
 	remote_window_size = size;
 }

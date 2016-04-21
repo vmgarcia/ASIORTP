@@ -17,6 +17,8 @@ debug:
 rtp:
 	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) test1.cpp socket.cpp connection.cpp segment.pb.cc -o rtp -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
 
+test2:
+	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) test2.cpp socket.cpp connection.cpp segment.pb.cc -o test2 -L$(BOOSTLIB) $(LIBS) $(LINKFLAGS) 2> error.txt
 
 ftaclient:
 	$(CC) $(CXXFLAGS) $(DEBUG) -I $(BOOST) ftaclient.cpp socket.cpp connection.cpp segment.pb.cc fta_request.pb.cc \
