@@ -19,7 +19,12 @@
 
 
 using boost::asio::ip::udp;
-// constructor for socket
+
+/**
+ * Constructor for socket
+ * look in rtp.hpp for details on all arguments
+ *
+ */
 rtp::Socket::Socket(boost::asio::io_service& io_service_, std::string source_ip, std::string source_port, int max_window_size): 
 	io_service_(io_service_),
 	socket_(io_service_, udp::endpoint(boost::asio::ip::address::from_string(source_ip), std::stoi(source_port))),
@@ -31,6 +36,9 @@ rtp::Socket::Socket(boost::asio::io_service& io_service_, std::string source_ip,
 {
 	// accept incoming rtp segments
 	if(DEBUG)std::cout << rtp::get_endpoint_str(socket_.local_endpoint()) << std::endl; 
+
+	// start receiving data, in the form of connection establishment
+	// or data packets
 	start_receive();
 }
 
@@ -43,6 +51,7 @@ void rtp::Socket::start_receive()
 	if(valid)
 	{
 		boost::shared_ptr<data_buffer> tmp_buf = boost::make_shared<data_buffer>(MAX_DATAGRAM_SIZE);
+		// if any data is received, store it in the tmp_buf and call the multiplex function
 		socket_.async_receive_from(boost::asio::buffer(*tmp_buf), remote_endpoint_, 
 			boost::bind(&rtp::Socket::multiplex, this,
 			tmp_buf,
@@ -59,13 +68,18 @@ void rtp::Socket::delete_connection(udp::endpoint endpoint_)
 
 }
 
+// this function determines how to handle received data
 void rtp::Socket::multiplex(boost::shared_ptr<data_buffer> tmp_buf,
 	const boost::system::error_code& error,
 	std::size_t bytes_transferred)
 {
 	if (valid)
 	{
+		// this identifier is created from the endpoint that is filled by async_receive_from
+		// the identifier is used for indexing into the unordered map of connections
 		std::string identifier = rtp::get_endpoint_str(remote_endpoint_);
+
+		// only multiplex if there were any bytes transferred in the first place
 		if (bytes_transferred)
 		{
 			if (connections.count(identifier) == 0 )  // connection not in list of connections
@@ -86,19 +100,25 @@ void rtp::Socket::multiplex(boost::shared_ptr<data_buffer> tmp_buf,
 			}
 			else
 			{
-				connections.at(identifier)->handle_rcv(tmp_buf);
+				// connection already established, let the connection handle the data
+				// itself
+				connections.at(identifier)->handle_rcv(tmp_buf); 
+
 			}
 
 		}
+		// start receiving more data
 	    start_receive();
 	}
 
 
 }
 
+
+// Create a connection in the first place
 boost::shared_ptr<rtp::Connection> rtp::Socket::create_connection(std::string ip, std::string port)
 {
-	udp::resolver resolver_(io_service_);
+	udp::resolver resolver_(io_service_); // resolver used for creating remote endpoint
 	udp::resolver::query query_(ip, port);
 	udp::endpoint remote_endpoint_ = *resolver_.resolve(query_);
 	boost::shared_ptr<Connection> connection = boost::make_shared<Connection>(remote_endpoint_,
@@ -108,6 +128,8 @@ boost::shared_ptr<rtp::Connection> rtp::Socket::create_connection(std::string ip
 
 	PackedMessage<rtp::Segment> m_packed_segment = boost::make_shared<rtp::Segment>();
 	boost::shared_ptr<data_buffer> message = boost::make_shared<data_buffer>(0);
+
+	// create syn segment. beginning of three way handshake
 	SegmentPtr synseg= boost::make_shared<rtp::Segment>();
 	synseg->set_syn(true);
 	// std::cout<<synseg->ack()<<std::endl;
@@ -124,6 +146,8 @@ boost::shared_ptr<rtp::Connection> rtp::Socket::create_connection(std::string ip
 		std::cout <<synseg->syn() << std::endl;
 	}
 	// std::cout << show_hex(*message) <<std::endl;
+
+	// send syn segment
   	socket_.async_send_to(boost::asio::buffer(*message), remote_endpoint_,
 	  boost::bind(&rtp::Socket::handle_connection_est, this, message,
 	  	connection,
@@ -135,6 +159,7 @@ boost::shared_ptr<rtp::Connection> rtp::Socket::create_connection(std::string ip
 
 }
 
+// Finish three way handshake started by create_connection function
 void rtp::Socket::connection_establishment(boost::shared_ptr<data_buffer> m_readbuf, boost::shared_ptr<Connection> connection)
 {
 	int buffer_position(0);
@@ -167,7 +192,7 @@ void rtp::Socket::connection_establishment(boost::shared_ptr<data_buffer> m_read
 	    std::cout << "___________________________________" <<std::endl;
 	}
 
-
+	// check the header for corruption of bits
 	boost::shared_ptr<data_buffer> message = boost::make_shared<data_buffer>();
 	if (check_header_checksum(rcvdseg))
 	{
@@ -240,6 +265,9 @@ void rtp::Socket::connection_establishment(boost::shared_ptr<data_buffer> m_read
 	    	connection->set_sequence_no(rcvdseg->sequence_no());
 	    	if(DEBUG) std::cout << "received ack" <<std::endl;
 	    	connection->set_valid(true);
+
+	    	// call the receiver function if it exists.
+	    	// this is good for when you are creating a server and can't explicitly connect
 	    	if (is_server)
 	    	{
 	    		receiver(connection);
@@ -269,6 +297,8 @@ void rtp::Socket::create_receiver(boost::function<void(boost::shared_ptr<rtp::Co
 	receiver = receiver_;
 
 }
+
+// this is the handler for creating timeout timers for connection establishment
 void rtp::Socket::handle_connection_est(boost::shared_ptr<data_buffer> message,
 	boost::shared_ptr<rtp::Connection> connection,
 	int next_seq_no,
@@ -293,6 +323,8 @@ void rtp::Socket::handle_connection_est(boost::shared_ptr<data_buffer> message,
 	const boost::system::error_code& error,
 	std::size_t bytes_transferred)
 {
+
+	// this extends the already created timer for the connection establishment timeout
 	timer->expires_at(timer->expires_at() + boost::posix_time::milliseconds(200));
 
 	timer->async_wait(boost::bind(&rtp::Socket::handle_connection_timeout, this,
@@ -312,15 +344,18 @@ void rtp::Socket::handle_connection_timeout(boost::shared_ptr<std::vector<uint8_
 			const boost::system::error_code& error,
 			std::size_t bytes_transferred)
 {
-	// if(DEBUG) std::cout << "GOT TO HANDLE CONNECTION TIMEOUT" <<std::endl;
-	if (connection->get_sequence_no() < next_seq_no && !error)
+	if(DEBUG) std::cout << "GOT TO HANDLE CONNECTION TIMEOUT" <<std::endl;
+	if (connection->get_sequence_no() < next_seq_no && !error) // the timeout only executes if sequence number hasn't advanced
 	{
 
-		// if (DEBUG) 
-		// {
-		// 	std::cout << "Timeout occurred at sequence_no " << next_seq_no << std::endl;
-		// 	std::cout << "Resending packets from " << connection->get_sequence_no() << std::endl;
-		// }
+		if (DEBUG) 
+		{
+			std::cout << "Timeout occurred at sequence_no " << next_seq_no << std::endl;
+			std::cout << "Resending packets from " << connection->get_sequence_no() << std::endl;
+		}
+
+		// if it got here it means the sequence number hasn't changed and their may have been dropped or reordered 
+		// packets
 	    socket_.async_send_to(boost::asio::buffer(*message), connection->get_endpoint(),
 	    	boost::bind(&rtp::Socket::handle_connection_est, this,
 	    		message,
@@ -345,6 +380,8 @@ boost::asio::io_service& rtp::Socket::get_io_service()
 	return io_service_;
 }
 
+
+// wrapper around the udp socket send_to function
 void rtp::Socket::udp_send_to(boost::shared_ptr<std::vector<uint8_t>> message, 
 		udp::endpoint endpoint_,
 		 handler_t send_handler)
@@ -386,6 +423,7 @@ boost::uint32_t rtp::create_checksum(uint8_t* bytes)
 	}
 }
 
+// creates a checksum form the fields in a header
 boost::uint32_t rtp::create_header_checksum(SegmentPtr segment)
 {
 	struct header_struct {

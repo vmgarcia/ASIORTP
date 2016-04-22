@@ -22,6 +22,8 @@
 using boost::asio::ip::udp;
 
 
+
+// connection constructor. Initializes all the values to their defaults
 rtp::Connection::Connection(udp::endpoint remote_endpoint_, boost::shared_ptr<rtp::Socket> socket_, int window_size):
 	remote_endpoint_(remote_endpoint_),
 	socket_(socket_),
@@ -43,19 +45,22 @@ rtp::Connection::Connection(udp::endpoint remote_endpoint_, boost::shared_ptr<rt
 {
 }
 
+
+// returns whether the connection is valid
 bool rtp::Connection::is_valid()
 {
-	// if (DEBUG && valid) 
-	// {
-	// 	std::cout << "is valid"<<std::endl;
-	// }
-	// else if (DEBUG)
-	// {
-	// 	std::cout << "not valid" << std::endl;
-	// }
+	if (DEBUG && valid) 
+	{
+		std::cout << "is valid"<<std::endl;
+	}
+	else if (DEBUG)
+	{
+		std::cout << "not valid" << std::endl;
+	}
 	return valid;
 }
 
+// set whether the connection is valid
 void rtp::Connection::set_valid(bool val)
 {
 	if(DEBUG && val) std::cerr << "Connection Created: " << rtp::get_endpoint_str(remote_endpoint_) 
@@ -75,6 +80,8 @@ void rtp::Connection::set_valid(bool val)
 		}
 	}
 }
+
+// send a fin packet to the remote connection
 void rtp::Connection::close_connection()
 {
 	boost::shared_ptr<data_buffer> message = boost::make_shared<data_buffer>(0);
@@ -84,20 +91,16 @@ void rtp::Connection::close_connection()
 	finseg->set_header_checksum(create_header_checksum(finseg));
 	PackedMessage<rtp::Segment> packeddata(finseg);
 	packeddata.pack(*message);
-	std::cout << "SENDING FIN" << std::endl;
+	if(DEBUG)std::cout << "SENDING FIN" << std::endl;
 	socket_->udp_send_to(message, remote_endpoint_, boost::bind(&rtp::Connection::handle_fin, this,
 		boost::asio::placeholders::error, 
 		boost::asio::placeholders::bytes_transferred));
 
 
 }
-// void rtp::Connection::handle_fin()
-// {
-// 	auto timer = new_timer(socket_->get_io_service(), boost::posix_time::milliseconds(300));
-// 	timer->async_wait(boost::bind(&rtp::Connection::wait_for_death, this));
 
-
-// }
+// called after sending the fin packet
+// this resets all the fields in the class to their defaults
 void rtp::Connection::handle_fin(	const boost::system::error_code& error,
 	std::size_t bytes_transferred)
 {
@@ -119,6 +122,7 @@ void rtp::Connection::handle_fin(	const boost::system::error_code& error,
 }
 
 
+// send data asynchronously
 void rtp::Connection::async_send(boost::shared_ptr<data_buffer> data_buff, boost::function<void(bool)> send_handler)
 {
 	set_send_handler(data_buff, send_handler);
@@ -127,13 +131,15 @@ void rtp::Connection::async_send(boost::shared_ptr<data_buffer> data_buff, boost
 
 }
 
+// set the send_handler and the write_buffer
 void rtp::Connection::set_send_handler(boost::shared_ptr<data_buffer> write_buff_, boost::function<void(bool)> send_handler)
 {
 	this->send_handler = send_handler;
 	write_buff = write_buff_;
 	valid_send_handler = true;
-	if (is_valid())
-	{
+	if (is_valid()) // if it is valid you need to set the write index to zero and update the oldsequencenumber with a new one
+	{				// it is used to calculate the offset in the write buffer
+
 
 		write_index = 0;
 
@@ -148,6 +154,7 @@ void rtp::Connection::set_send_handler(boost::shared_ptr<data_buffer> write_buff
 
 }
 
+// send whatever data is ready to be sent and hasn't been acked
 void rtp::Connection::send()
 {
 	if (valid_send_handler && is_valid())
@@ -166,6 +173,8 @@ void rtp::Connection::send()
 
 	}
 }
+
+// call the send handler. should only be called once all the data has been sent and acked
 void rtp::Connection::call_send_handler()
 {
 	if ((unsigned) send_sequence_no >= write_buff->size() + old_sequence_no && valid_send_handler )
@@ -178,6 +187,7 @@ void rtp::Connection::call_send_handler()
 
 }
 
+// creates timeout for whenever there are dropped packets that aren't acked
 void rtp::Connection::handle_send(boost::shared_ptr<data_buffer> message, int next_seq_no,
 	const boost::system::error_code& error,
 	std::size_t bytes_transferred)
@@ -219,6 +229,8 @@ void rtp::Connection::handle_send(boost::shared_ptr<data_buffer> message,
 	}
 
 }
+
+// if a sequence no hasn't been acked, resend it
 void rtp::Connection::handle_send_timeout(boost::shared_ptr<data_buffer> message,
 			int next_seq_no,
 			boost::shared_ptr<boost::asio::deadline_timer> timer,
@@ -240,7 +252,7 @@ void rtp::Connection::handle_send_timeout(boost::shared_ptr<data_buffer> message
 			std::cout << "Timeout occurred at sequence_no " << next_seq_no << std::endl;
 			std::cout << "Resending packets from " << send_sequence_no << std::endl;
 		}
-		congestion_window = congestion_window /2;
+		congestion_window = congestion_window /2; // decreasing the congestion_window by half once there is a dropped packet
 		boost::shared_ptr<data_buffer> message(package_message());
 	    socket_->udp_send_to(message, remote_endpoint_,
 	    	boost::bind(&rtp::Connection::handle_send, this,
@@ -263,6 +275,7 @@ void rtp::Connection::handle_send_timeout(boost::shared_ptr<data_buffer> message
 	}
 }
 
+// create the segment that is going to be sent
 boost::shared_ptr<data_buffer> rtp::Connection::package_message()
 {
 	int pack_index(write_index);
@@ -272,17 +285,19 @@ boost::shared_ptr<data_buffer> rtp::Connection::package_message()
 		std::cout << "CONGESTION WINDOW GOD DAMNIT" << std::endl;
 		std::cout << congestion_window <<std::endl;
 	}
-	for (int i = 0; i < congestion_window; i++)
+	for (int i = 0; i < congestion_window; i++) // based on the congestion window, aka the number of packets you can put in one segment
 	{
-		int amount_to_send = std::min((int)930, (int)write_buff->size() - pack_index);
+		int amount_to_send = std::min((int)930, (int)write_buff->size() - pack_index); // get the minimum amount of data that can be put in a packet
 		if (amount_to_send > 0)
 		{
-			boost::shared_ptr<data_buffer> tmp_buff(boost::make_shared<data_buffer>(write_buff->begin()+pack_index,
+			// create the buffer and populate it with data we want to send
+			boost::shared_ptr<data_buffer> tmp_buff(boost::make_shared<data_buffer>(write_buff->begin()+pack_index, 
 				write_buff->begin()+pack_index+amount_to_send));
 
+			// create a new message buffer
 			boost::shared_ptr<data_buffer> message = boost::make_shared<data_buffer>(0);
 			SegmentPtr dataseg= boost::make_shared<rtp::Segment>();
-			dataseg->set_sequence_no(old_sequence_no + pack_index);
+			dataseg->set_sequence_no(old_sequence_no + pack_index); // the sequence number is the byte of the first bit in the data
 			std::string data(tmp_buff->begin(), tmp_buff->end());
 			dataseg->set_data(data);
 			if (DEBUG)
@@ -297,7 +312,7 @@ boost::shared_ptr<data_buffer> rtp::Connection::package_message()
 			PackedMessage<rtp::Segment> packeddata(dataseg);
 			packeddata.pack(*message);
 			complete_msg->insert(complete_msg->end(), message->begin(), message->end());
-			pack_index += amount_to_send;
+			pack_index += amount_to_send; 
 
 		}
 		else
@@ -311,6 +326,7 @@ boost::shared_ptr<data_buffer> rtp::Connection::package_message()
 }
 
 
+// if the receive window size is greater than 0 load it with memory
 void rtp::Connection::async_rcv(boost::shared_ptr<data_buffer> data_buff, boost::function<void(bool)> rcv_handler)
 {
 	set_rcv_handler(data_buff, rcv_handler);
@@ -324,7 +340,7 @@ void rtp::Connection::async_rcv(boost::shared_ptr<data_buffer> data_buff, boost:
 
 
 
-
+// set the receive handler
 void rtp::Connection::set_rcv_handler(boost::shared_ptr<data_buffer> pass_back_buffer_, boost::function<void(bool)> rcv_handler)
 {
 	this->rcv_handler = rcv_handler;
@@ -335,20 +351,12 @@ void rtp::Connection::set_rcv_handler(boost::shared_ptr<data_buffer> pass_back_b
 
 }
 
+// if the receive handler is valid call it
 void rtp::Connection::call_rcv_handler()
 {
 	if (valid_rcv_handler)
 	{
-		if (DEBUG && false)
-		{
-			std::ofstream writer;
-			writer.open("copy3.txt", std::ios_base::app |std::ios::ate |std::ios::out);
-			for (unsigned i =0; i < rcv_window->size(); i++)
-			{
-				writer << (*rcv_window)[i];
-			}
-			writer << std::endl;
-		}
+
 		if (DEBUG2)
 		{
 			std::string dat(rcv_window->begin(), rcv_window->end());
@@ -363,6 +371,7 @@ void rtp::Connection::call_rcv_handler()
 	}
 }
 
+// handle receive. this determines what type of packet we are receiving and processes it correctly
 void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
 {
 	int buffer_position(0);
@@ -373,6 +382,8 @@ void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
 		//std::cout << show_hex(*m_readbuf) <<std::endl;
 
 	    int msg_len = m_packed_segment.decode_header(*m_readbuf, buffer_position);
+
+	    // if the message has data, get a packet from the front of the message
 	    if (msg_len <= (int)m_readbuf->size() - buffer_position && msg_len<=1000 && buffer_position<=50000
 	    	&& msg_len >= 0 && buffer_position >=0){
 	    	if(DEBUG)
@@ -380,23 +391,24 @@ void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
 	    		std::cout<<"buffer_position: " <<buffer_position<<std::endl;
 	    		std::cout <<"MESSAGE LENGTH: " <<msg_len<<std::endl;
 	    	}
-		    m_packed_segment.unpack(*m_readbuf, msg_len, buffer_position);
+		    m_packed_segment.unpack(*m_readbuf, msg_len, buffer_position); // here we unpack a paccket from the front of the message
 	    }
 	    else
 	    {
-	    	break;
+	    	break; // if the message doesn't have any more data break out of the while loop
 	    }
-		SegmentPtr rcvdseg = m_packed_segment.get_msg();
+		SegmentPtr rcvdseg = m_packed_segment.get_msg(); // get the packet out of the buffer
 
+		// if the data checksums are correct
 		if (check_header_checksum(rcvdseg) && check_data_checksum(rcvdseg))
 		{
-			if (rcvdseg->ack())
+			if (rcvdseg->ack()) // if it is an ack 
 			{
 
 				if (DEBUG) std::cout << "RECEIVED ACK FOR: " << rcvdseg->sequence_no() <<std::endl;
-				if (rcvdseg->sequence_no() >= send_sequence_no)
-				{
-					send_sequence_no = rcvdseg->sequence_no();
+				if (rcvdseg->sequence_no() >= send_sequence_no) // if the sequence number is greater than or equal to the last sequence number
+				{ 
+					send_sequence_no = rcvdseg->sequence_no(); // update the sequence number
 					write_index = send_sequence_no -old_sequence_no;
 					if(DEBUG)
 					{
@@ -405,35 +417,31 @@ void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
 
 					}
 				}
-				inc_congestion();
-				reset_timeout();
-				send();
+				inc_congestion(); // increase the congestion window
+				reset_timeout(); // reset the count of how many timeouts there have been
+				send();  // send more data
 			
 			}
-			else if (rcvdseg->fin())
+			else if (rcvdseg->fin()) // if it is a fin packet reset the connection
 			{
 				std::cout << "GOT FIN, CLOSING" << std::endl;
 				close_connection();
 				break;
 			}
-			else if (rcvdseg->sequence_no() == sequence_no)
+			else if (rcvdseg->sequence_no() == sequence_no) // if the sequence number of the data is exactly the enxt sequence number we need
 			{
 
 				is_data = true;
 	 
-				//if ((int)(rcv_window->size() + data_s.size())  < window_size)
 				{
 					rcv_window->insert(rcv_window->end(), rcvdseg->data().begin(), rcvdseg->data().end());
 
-					// rcv_window->insert(rcv_window->end(), m_readbuf->begin(), m_readbuf->end());
 					sequence_no += (int)rcvdseg->data().size();
 					if(DEBUG)
 					{
 						std::cout << "SEQUENCE NO OF THIS DATA" << "\n";
 						std::cout << rcvdseg->sequence_no() << "\n";
 						std::cout << "INCREASE SEQUENCE NO " << sequence_no << "\n";
-						// std::cout << "RECEIVED THIS DATA\n";
-						// std::cout << rcvdseg->data() <<std::endl;
 					}	
 				}
 				reset_timeout();
@@ -456,20 +464,21 @@ void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
 	}
 	if (is_data)
 	{
-		send_ack();
+		send_ack(); // if we received data, send an ack for it
 	}
 
 	call_rcv_handler();
 
 }
 
+// funciton that sends an ack
 void rtp::Connection::send_ack()
 {
 
 	boost::shared_ptr<data_buffer> ack = boost::make_shared<data_buffer>(0);
 	SegmentPtr ackseg= boost::make_shared<rtp::Segment>();
 	ackseg->set_ack(true);
-	ackseg->set_sequence_no(sequence_no);
+	ackseg->set_sequence_no(sequence_no); // send an ack for whatever sequence number we are currently at
 	if(DEBUG)
 	{
 		std::cout << "ACK " << sequence_no <<std::endl;
@@ -478,7 +487,7 @@ void rtp::Connection::send_ack()
 	PackedMessage<rtp::Segment> packeddata(ackseg);
 	packeddata.pack(*ack);
 	socket_->udp_send_to(ack, remote_endpoint_,
-		boost::bind(&rtp::Connection::handle_ack, this,
+		boost::bind(&rtp::Connection::handle_ack, this, // the handler ack function is bound as a callback
 			ack,
 			sequence_no,
 			boost::asio::placeholders::error,
@@ -486,6 +495,7 @@ void rtp::Connection::send_ack()
 
 }
 
+// create a timer that will timeout in 200 ms
 void rtp::Connection::handle_ack(boost::shared_ptr<data_buffer> message, 
 		int next_seq_no,
 		const boost::system::error_code& error, 
@@ -501,6 +511,7 @@ void rtp::Connection::handle_ack(boost::shared_ptr<data_buffer> message,
 
 }
 
+// increase the timer by 200 ms if the timeout execustes
 void rtp::Connection::handle_ack(boost::shared_ptr<data_buffer> message, 
 		int next_seq_no,
 		boost::shared_ptr<boost::asio::deadline_timer> timer,
@@ -517,6 +528,10 @@ void rtp::Connection::handle_ack(boost::shared_ptr<data_buffer> message,
 		bytes_transferred));
 }
 
+
+// in an ack timeout the send ack function will be called again
+// what this does is makes a new ack for the current sequence number
+// if the next_seq_no argument is greater than or equal to the current sequence number
 void rtp::Connection::handle_ack_timeout(boost::shared_ptr<data_buffer> message,
 	int next_seq_no,
 	boost::shared_ptr<boost::asio::deadline_timer> timer,
@@ -557,7 +572,7 @@ void rtp::Connection::handle_ack_timeout(boost::shared_ptr<data_buffer> message,
 }
 
 
-
+// create a new timer and place it in the map of timers
 boost::shared_ptr<boost::asio::deadline_timer> rtp::Connection::new_timer(
 	boost::asio::io_service& io, 
 	boost::posix_time::milliseconds milliseconds)
@@ -567,6 +582,7 @@ boost::shared_ptr<boost::asio::deadline_timer> rtp::Connection::new_timer(
 	return timer;
 }
 
+// delete timer from timer vector
 void rtp::Connection::delete_timer(boost::shared_ptr<boost::asio::deadline_timer> timer)
 {
 	timer->cancel();
@@ -615,6 +631,7 @@ void rtp::Connection::reset_timeout()
 	timeout_count = 0;
 }
 
+// imcrease congestion. makes sure the congestion window never gets too big
 void rtp::Connection::inc_congestion()
 {
 	if (false)

@@ -19,10 +19,12 @@
 #include "fta_request.pb.h"
 #include "rtp.hpp"
 
-#define FTA_DEBUG true
+#define FTA_DEBUG false
 
 typedef boost::shared_ptr<fta_request> request_ptr;
 
+// not_receiving and not sending are used to track whether requests are done before
+// prompting for a new one
 bool not_receiving=true;
 bool not_sending=true;
 void client_get_handler(request_ptr request, boost::shared_ptr<data_buffer> data, boost::shared_ptr<rtp::Connection> conn,
@@ -41,12 +43,6 @@ unsigned decode_header(const data_buffer& buf)
     {
         msg_size = msg_size * 256 + (static_cast<unsigned>((char)buf[i]) & 0xFF);
     }
-    // for (unsigned i = 0; i < 40; ++i)
-    // {
-    //  	std::cout << "CHAR " << (char)buf[i] <<std::endl;
-
-    // }
-    // std::cout << "BUFF SIZE " << buf.size() << std::endl;
 
     return msg_size;
 }
@@ -68,13 +64,15 @@ std::vector<std::string> &split(const std::string &s, char delim, std::vector<st
     }
     return elems;
 }
-
+// splits a string based on a delimiter
 std::vector<std::string> split(const std::string &s, char delim) {
     std::vector<std::string> elems;
     split(s, delim, elems);
     return elems;
 }
 
+
+// get the size of a file based on its filename
 int get_file_size(std::string filename)
 {
 	std::ifstream file;
@@ -87,6 +85,7 @@ int get_file_size(std::string filename)
 	return fileSize;
 }
 
+// finish handler for the client, called when all requests, get or post, are done
 void client_finish(boost::shared_ptr<rtp::Connection> conn, boost::shared_ptr<rtp::Socket> socket_, bool is_get, bool killed)
 {
 	if (is_get)
@@ -99,9 +98,8 @@ void client_finish(boost::shared_ptr<rtp::Connection> conn, boost::shared_ptr<rt
 	}
 	if(not_sending && not_receiving && !killed)
 	{
-		// std::cout<<"Closing"<<std::endl;
-		// conn->close_connection();
-		accept_command(conn, socket_);
+		accept_command(conn, socket_); // when the client is done sending and receiving prompt for a 
+										// new request
 	}
 	if(killed)
 	{
@@ -133,7 +131,8 @@ void handle_req(request_ptr request, int req_type, boost::shared_ptr<rtp::Connec
 
 }
 
-
+// based on user input creates a request packet which is then sent to the server which indicates
+// to the server what it should do. ie get or post 
 void accept_command(boost::shared_ptr<rtp::Connection> conn, boost::shared_ptr<rtp::Socket> socket)
 {
 
@@ -162,6 +161,7 @@ void accept_command(boost::shared_ptr<rtp::Connection> conn, boost::shared_ptr<r
 			std::cout <<"MESSAGE SIZE\n";
 			std::cout << message->size() << std::endl;
 		}
+		// sends the message, when the message is sent run the handle_req callback
 		conn->async_send(message, boost::bind(&handle_req, request, 1, conn, socket, _1));
 
 	}
@@ -172,6 +172,7 @@ void accept_command(boost::shared_ptr<rtp::Connection> conn, boost::shared_ptr<r
 		request->set_post_size(get_file_size(command_info[1]));
 		PackedMessage<fta_request> m_packed_request(request);
 		m_packed_request.pack(*message);
+		// sends the message, when the message is sent run the handle_req callback
 		conn->async_send(message, boost::bind(&handle_req, request, 2, conn, socket, _1));
 
 	}
@@ -185,6 +186,7 @@ void accept_command(boost::shared_ptr<rtp::Connection> conn, boost::shared_ptr<r
 
 		PackedMessage<fta_request> m_packed_request(request);
 		m_packed_request.pack(*message);
+		// sends the message, when the message is sent run the handle_req callback
 		conn->async_send(message, boost::bind(&handle_req, request, 3, conn, socket, _1));
 
 	}
@@ -201,6 +203,7 @@ void accept_command(boost::shared_ptr<rtp::Connection> conn, boost::shared_ptr<r
     }
 }
 
+// get request handler, receives data from server
 void client_get_handler(request_ptr request, boost::shared_ptr<data_buffer> data, boost::shared_ptr<rtp::Connection> conn,
 	boost::shared_ptr<rtp::Socket> socket, int size, int current_index, bool killed)
 {
@@ -257,6 +260,7 @@ void client_get_handler(request_ptr request, boost::shared_ptr<data_buffer> data
 	}
 }
 
+// post request handler, loads file into memory then sends it
 void post(request_ptr request, boost::shared_ptr<rtp::Connection> conn, boost::shared_ptr<rtp::Socket> socket)
 {
 	std::ifstream file;
@@ -286,7 +290,7 @@ void post(request_ptr request, boost::shared_ptr<rtp::Connection> conn, boost::s
 }
 
 
-
+// based on command line arguments connect to server
 int main(int argc, char* argv[])
 {
 	boost::asio::io_service io_service_;
@@ -299,7 +303,7 @@ int main(int argc, char* argv[])
 	{
 		std::vector<std::string> ip_port = split(argv[1], ':');
 		ip =ip_port[0];
-		port = ip_port[0];
+		port = ip_port[1];
 		window_size = std::stoi(std::string(argv[2]));
 	}
 	else
@@ -309,16 +313,9 @@ int main(int argc, char* argv[])
 	}
 
 
-	// socket.reset(new rtp::Socket(io_service_, u8"127.0.0.1", u8"4546"));
-	// boost::shared_ptr<rtp::Connection> conn = socket->create_connection(u8"127.0.0.1", u8"4545");
 	socket.reset(new rtp::Socket(io_service_, u8"127.0.0.1", u8"4546", window_size));
 	boost::shared_ptr<rtp::Connection> conn = socket->create_connection(ip, port);
 
-	std::cout << "CREATING CONNECTION" <<std::endl;
-	//boost::shared_ptr<data_buffer> buff(boost::make_shared<data_buffer>(msg.begin(), msg.end()));
-	// not_sending=false;
-	// not_receiving=false;
-	//conn->async_send(buff, boost::bind(&client_send_request, conn, socket, true, _1));
 
 	boost::asio::deadline_timer starttimer(io_service_, boost::posix_time::milliseconds(1000));
 	starttimer.async_wait(boost::bind(&accept_command, conn, socket));
