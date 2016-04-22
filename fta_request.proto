@@ -1,0 +1,8 @@
+
+message fta_request {
+	optional bool post = 1;
+	optional bool get = 2;
+	optional string post_filename = 3;
+	optional uint32 post_size = 4;
+	optional string get_filename = 5;
+}

@@ -4,7 +4,7 @@
 #define DEBUG true
 #define DEBUG2 false
 #define MAX_DATAGRAM_SIZE 50000
-#define MAX_TIMEOUT_COUNT 20
+#define MAX_TIMEOUT_COUNT 10000
 #define DEFAULT_WINDOW_SIZE 1000
 namespace rtp
 {
