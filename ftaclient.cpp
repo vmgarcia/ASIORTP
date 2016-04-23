@@ -18,6 +18,8 @@
 #include "segment.pb.h"
 #include "fta_request.pb.h"
 #include "rtp.hpp"
+#include <stdlib.h>     /* srand, rand */
+#include <ctime>
 
 #define FTA_DEBUG false
 
@@ -293,11 +295,11 @@ void post(request_ptr request, boost::shared_ptr<rtp::Connection> conn, boost::s
 // based on command line arguments connect to server
 int main(int argc, char* argv[])
 {
+	srand(time(0));
 	boost::asio::io_service io_service_;
 	boost::shared_ptr<rtp::Socket> socket;
 	std::string ip;
 	std::string port;
-
 	int window_size = 20000;
 	if (argc == 3)
 	{
@@ -312,8 +314,10 @@ int main(int argc, char* argv[])
 		port = u8"4545";
 	}
 
+	int lp =  rand()% 30000 + 4000;
+	std::string local_port = std::to_string(lp);
 
-	socket.reset(new rtp::Socket(io_service_, u8"127.0.0.1", u8"4546", window_size));
+	socket.reset(new rtp::Socket(io_service_, u8"127.0.0.1", local_port, window_size));
 	boost::shared_ptr<rtp::Connection> conn = socket->create_connection(ip, port);
 
 

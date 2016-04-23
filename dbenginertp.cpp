@@ -19,6 +19,9 @@
 #define DB_DEBUG false
 
 // the data in the database
+
+// ./dbClientRTP 127.0.0.1:4545 903076259 first_name quality_points
+// ./dbClientRTP 127.0.0.1:4545 903084074 last_name quality_points gpa_hours
 std::unordered_map<std::string, std::unordered_map<std::string, std::string>> gt_db = {
 	{
 		"903076259", {
@@ -106,7 +109,6 @@ std::vector<std::string> split(const std::string &s, char delim) {
 // close connection with client
 void close_connection(boost::shared_ptr<rtp::Connection> conn, bool killed)
 {
-	conn->close_connection();
 }
 
 // process query string and return information based on the query

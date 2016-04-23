@@ -15,6 +15,8 @@
 #include "packed_message.h"
 #include "segment.pb.h"
 #include "rtp.hpp"
+#include <stdlib.h>     /* srand, rand */
+#include <ctime>
 
 #define DB_DEBUG false
 
@@ -68,7 +70,7 @@ void await_response(boost::shared_ptr<data_buffer> buff, boost::shared_ptr<rtp::
 // based on user input connect to a server then send a query
 int main(int argc, char* argv[])
 {
-
+	srand(time(0));
 	boost::asio::io_service io_service_;
 	boost::shared_ptr<rtp::Socket> socket;
 	std::string ip;
@@ -80,8 +82,9 @@ int main(int argc, char* argv[])
 	ip =ip_port[0];
 	port = ip_port[1];
 	
-
-	socket.reset(new rtp::Socket(io_service_, u8"127.0.0.1", u8"4546", window_size));
+	int lp = rand() % 30000 + 4000;
+	std::string local_port = std::to_string(lp);
+	socket.reset(new rtp::Socket(io_service_, u8"0.0.0.0", local_port, window_size));
 	boost::shared_ptr<rtp::Connection> conn = socket->create_connection(ip, port);
 
 	std::string query_string="";

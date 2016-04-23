@@ -424,7 +424,7 @@ void rtp::Connection::handle_rcv(boost::shared_ptr<data_buffer> m_readbuf)
 			}
 			else if (rcvdseg->fin()) // if it is a fin packet reset the connection
 			{
-				std::cout << "GOT FIN, CLOSING" << std::endl;
+				if(DEBUG)std::cout << "GOT FIN, CLOSING" << std::endl;
 				close_connection();
 				break;
 			}
